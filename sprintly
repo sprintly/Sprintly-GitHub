@@ -116,8 +116,7 @@ class SprintlyTool:
 		# ensure it is executable
 		try:
 			subprocess.call(['chmod', '+x', target])
-		except Exception as e:
-			print e
+		except Exception:
 			raise SprintlyException('Unable to make ' + target + ' executable.')
 			
 		# done!
