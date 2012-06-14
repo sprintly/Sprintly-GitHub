@@ -220,7 +220,6 @@ class SprintlyTool:
 		cache_file.write('')
 		cache_file.close()
 		
-	
 	def loadFromConfig(self):
 		"""
 		Load user and key from the config file.
@@ -325,10 +324,7 @@ class SprintlyTool:
 				
 				for child in item['children']:
 					if child['status'] in statuses:
-						print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]
-		
-		print ''
-		
+						print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]		
 	
 	def sprintlyAPICall(self, url):
 		"""
