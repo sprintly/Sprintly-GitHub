@@ -385,6 +385,18 @@ class SprintlyTool:
 		
 		print 'Hook was installed at ' + destination
 		
+		# check to see if the email associated with git matches the sprint.ly email
+		# if not, sprint.y won't be able to create comments
+		try:
+			process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
+			stdout, stderr = process.communicate()
+			gitEmail = stdout.strip()
+			if gitEmail != self.config['user']:
+				print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self.config['user'] + ')'
+				print 'WARNING: If your git email does not match your sprint.ly username, sprint.ly won\'t be able to process this commit.'
+		except Exception as e:
+			print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
+		
 	def updateHook(self):
 		"""
 		Download the commit-msg hook to ~/.sprintly/commit-msg.
