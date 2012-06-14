@@ -26,10 +26,10 @@ class SprintlyTool:
 		Initialize instance variables.
 		"""
 		
-		self.config = None
-		self.SPRINTLY_DIR_PATH = None
-		self.SPRINTLY_CONFIG_PATH = None
-		self.SPRINTLY_CACHE_PATH = None
+		self._config = None
+		self._sprintlyDirectoryPath = None
+		self._sprintlyConfigPath = None
+		self._sprintlyCachePath = None
 
 	def run(self):
 		"""
@@ -146,9 +146,9 @@ class SprintlyTool:
 		if home == '~':
 			raise SprintlyException('Unable to expand home directory.')
 	
-		self.SPRINTLY_DIR_PATH = home + '/.sprintly/'
-		if not os.path.isdir(self.SPRINTLY_DIR_PATH):
-			self.createSprintlyDirectory(self.SPRINTLY_DIR_PATH)
+		self._sprintlyDirectoryPath = home + '/.sprintly/'
+		if not os.path.isdir(self._sprintlyDirectoryPath):
+			self.createSprintlyDirectory(self._sprintlyDirectoryPath)
 		
 	def createSprintlyDirectory(self, path):
 		"""
@@ -164,9 +164,9 @@ class SprintlyTool:
 		Set the sprint.ly config path.
 		"""
 			
-		self.SPRINTLY_CONFIG_PATH = self.SPRINTLY_DIR_PATH + '/sprintly.config'
-		if not os.path.isfile(self.SPRINTLY_CONFIG_PATH):
-			self.createSprintlyConfig(self.SPRINTLY_CONFIG_PATH)
+		self._sprintlyConfigPath = self._sprintlyDirectoryPath + '/sprintly.config'
+		if not os.path.isfile(self._sprintlyConfigPath):
+			self.createSprintlyConfig(self._sprintlyConfigPath)
 			
 	def createSprintlyConfig(self, path):
 		"""
@@ -177,7 +177,7 @@ class SprintlyTool:
 		print 'Config not found. Creating config...'
 		user = raw_input('Enter sprint.ly account (email): ')
 		key  = raw_input('Enter sprint.ly API Key: ')
-		self.config = {'user':user, 'key':key}
+		self._config = {'user':user, 'key':key}
 	
 		
 		# try and use API with these values to determine validity
@@ -188,10 +188,10 @@ class SprintlyTool:
 			raise SprintlyException('Invalid credentials. Please ensure you are using your own API Key.')
 		
 		# add user id to config
-		self.config['id'] = response['id']
+		self._config['id'] = response['id']
 		
 		# write config file if all is good
-		serialized_config = json.dumps(self.config)
+		serialized_config = json.dumps(self._config)
 		
 		try:
 			config_file = open(path, 'w')
@@ -206,9 +206,9 @@ class SprintlyTool:
 		Set the sprint.ly cache path.
 		"""
 			
-		self.SPRINTLY_CACHE_PATH = self.SPRINTLY_DIR_PATH + '/sprintly.cache'
-		if not os.path.isfile(self.SPRINTLY_CACHE_PATH):
-			self.createSprintlyCache(self.SPRINTLY_CACHE_PATH)
+		self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
+		if not os.path.isfile(self._sprintlyCachePath):
+			self.createSprintlyCache(self._sprintlyCachePath)
 			
 	def createSprintlyCache(self, path):
 		"""
@@ -228,11 +228,11 @@ class SprintlyTool:
 				
 		try:
 		
-			config_file = open(self.SPRINTLY_CONFIG_PATH, 'r')
+			config_file = open(self._sprintlyConfigPath, 'r')
 			serialized_config = config_file.readline()
 			config_file.close()
 			
-			self.config = json.loads(serialized_config)
+			self._config = json.loads(serialized_config)
 	
 		except:
 			raise SprintlyException('Unable to read credentials from disk at ' + path)
@@ -269,7 +269,7 @@ class SprintlyTool:
 				product_id = str(product['id'])
 				
 				# get the top-level items
-				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self.config['id']) + '&limit=100')
+				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&limit=100')
 				if not items:
 					raise SprintlyException('Unable to get items for ' + str(product_id))
 				
@@ -291,7 +291,7 @@ class SprintlyTool:
 		
 			serialized_cache = json.dumps(cache)
 		
-			cache_file = open(self.SPRINTLY_CACHE_PATH, 'w')
+			cache_file = open(self._sprintlyCachePath, 'w')
 			cache_file.write(serialized_cache)
 			cache_file.close()
 		except Exception:
@@ -304,7 +304,7 @@ class SprintlyTool:
 		Read from the cache and return a list of sprint.ly items.
 		"""
 		
-		cache_file = open(self.SPRINTLY_CACHE_PATH, 'r')
+		cache_file = open(self._sprintlyCachePath, 'r')
 		serialized_cache = cache_file.readline()
 		cache_file.close()
 		
@@ -339,7 +339,7 @@ class SprintlyTool:
 		url = 'https://sprint.ly/api/' + url
 		
 		try:
-			userData = "Basic " + (self.config['user'] + ":" + self.config['key']).encode("base64").rstrip()
+			userData = "Basic " + (self._config['user'] + ":" + self._config['key']).encode("base64").rstrip()
 			req = urllib2.Request(url)
 			req.add_header('Accept', 'application/json')
 			req.add_header('Authorization', userData)
@@ -392,8 +392,8 @@ class SprintlyTool:
 			process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
 			stdout, stderr = process.communicate()
 			gitEmail = stdout.strip()
-			if gitEmail != self.config['user']:
-				print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self.config['user'] + ')'
+			if gitEmail != self._config['user']:
+				print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
 				print 'WARNING: If your git email does not match your sprint.ly username, sprint.ly won\'t be able to process this commit.'
 		except Exception as e:
 			print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
@@ -415,14 +415,14 @@ class SprintlyTool:
 			raise SprintlyException('Unable to obtain commit-msg from ' + COMMIT_MSG_SOURCE_URL)
 		
 		# save the file		
-		if self.SPRINTLY_DIR_PATH:
+		if self._sprintlyDirectoryPath:
 			try:
-				commit_msg_path = self.SPRINTLY_DIR_PATH + 'commit-msg'
+				commit_msg_path = self._sprintlyDirectoryPath + 'commit-msg'
 				commit_msg_file = open(commit_msg_path, 'w')
 				commit_msg_file.write(commit_msg_file_contents)
 				commit_msg_file.close()
 			except Exception:
-				raise SprintlyException('Unable to save file to ' + self.SPRINTLY_DIR_PATH)
+				raise SprintlyException('Unable to save file to ' + self._sprintlyDirectoryPath)
 		else:
 			raise SprintlyException('Unable to find users home directory.')
 	
