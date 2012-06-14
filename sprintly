@@ -196,6 +196,7 @@ class SprintlyTool:
 			config_file = open(path, 'w')
 			config_file.write(serialized_config)
 			config_file.close()
+			print 'Configuration successfully created.'
 		except:
 			raise SprintlyException('Unable to write configuration to disk at ' + path)
 	
