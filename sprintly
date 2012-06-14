@@ -387,7 +387,7 @@ class SprintlyTool:
 		print 'Hook was installed at ' + destination
 		
 		# check to see if the email associated with git matches the sprint.ly email
-		# if not, sprint.y won't be able to create comments
+		# if not, sprint.ly won't be able to create comments
 		try:
 			process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
 			stdout, stderr = process.communicate()
