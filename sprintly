@@ -5,11 +5,14 @@ import os
 import urllib2
 import json
 import shutil
+import subprocess
+
 from time import time
 from optparse import OptionParser
 from stat import S_IXUSR
 
 # constants
+SPRINTLY_SOURCE_URL   = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly"
 COMMIT_MSG_SOURCE_URL = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg"
 
 class SprintlyTool:
@@ -37,13 +40,21 @@ class SprintlyTool:
 		
 			usage = 'Usage: %prog [options]\n\nWith no options, your sprintly items will be shown.'
 			parser = OptionParser(usage=usage)
+			parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
 			parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
 			parser.add_option('--update-hook', dest='updateHook', help='update commit-msg hook in all repositories', action='store_true', default=False)
 			
 			(options, args) = parser.parse_args()
 		
+			# if the user wants to install, do it first
+			if options.install:
+				self.install()
+				return;
+				
+			# ensure that the ~/.sprintly/ folder exists, we have credentials, etc
 			self.initialize()
 			
+			# run the requested option (note: install is handled above)
 			if options.installHook:
 				self.installHook()
 			elif options.updateHook:
@@ -53,7 +64,65 @@ class SprintlyTool:
 	
 		except Exception as e:
 			die('Fatal Error: ' + str(e))
+	
+	def install(self):
+		"""
+		Install this tool at /usr/bin/sprintly. If another file already
+		exists with the same name, user will be prompted to replace the file.
+		"""
 		
+		# must be run as root
+		euid = os.geteuid() 
+		if euid != 0:
+			print 'Must be run as root.'
+			return
+		
+		print "Downloading latest version of sprintly tool from GitHub..."
+		
+		# get the file
+		try:
+			response = urllib2.urlopen(SPRINTLY_SOURCE_URL)
+			sprintly_file_contents = response.read()
+		except Exception:
+			raise SprintlyException('Unable to obtain commit-msg from ' + SPRINTLY_SOURCE_URL)
+		
+		# verify nothing exists at the target path
+		target = '/usr/bin/sprintly'
+		if os.path.isfile(target):
+			overwrite = raw_input('A file already exists at ' + target + '. Overwrite file? ')
+			while overwrite != 'y' and overwrite != 'n':
+				overwrite = raw_input('Please enter y/n: ')
+				
+			if overwrite == 'n':
+				print 'Unable to install. Please install manually.'
+				return
+	
+			# remove existing file
+			print 'Deleting ' + target + '...'
+			try:
+				os.unlink(target)
+			except Exception:
+				print e
+				raise SprintlyException('Unable to remove ' + target)
+				
+		# copy file to target
+		try:
+			target_file = open(target, 'w')
+			target_file.write(sprintly_file_contents)
+			target_file.close()
+		except Exception:
+			raise SprintlyException('Unable to save file to ' + target)
+			
+		# ensure it is executable
+		try:
+			subprocess.call(['chmod', '+x', target])
+		except Exception as e:
+			print e
+			raise SprintlyException('Unable to make ' + target + ' executable.')
+			
+		# done!
+		print 'Successfully installed sprintly to ' + target
+				
 	def initialize(self):
 		"""
 		Ultimate goal is to get the user and key from the config file.
@@ -323,7 +392,7 @@ class SprintlyTool:
 		Returns the path of the file.
 		"""
 		
-		print 'Downloading...'
+		print 'Downloading latest version of commit-msg hook from GitHub...'
 		
 		# get the file
 		try:
@@ -340,7 +409,7 @@ class SprintlyTool:
 				commit_msg_file.write(commit_msg_file_contents)
 				commit_msg_file.close()
 			except Exception:
-				raise SprintlyException('Unable to download file to ' + self.SPRINTLY_DIR_PATH)
+				raise SprintlyException('Unable to save file to ' + self.SPRINTLY_DIR_PATH)
 		else:
 			raise SprintlyException('Unable to find users home directory.')
 	
