@@ -74,7 +74,7 @@ class SprintlyTool:
 		# must be run as root
 		euid = os.geteuid() 
 		if euid != 0:
-			print 'Must be run as root.'
+			print 'Must be run as root. Try re-running with sudo.'
 			return
 		
 		print "Downloading latest version of sprintly tool from GitHub..."
