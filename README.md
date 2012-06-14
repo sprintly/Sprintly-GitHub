@@ -59,7 +59,7 @@ You can update the hook periodically by running:
 
 	$ sprintly --update-hook
 	Downloading latest version of commit-msg hook from GitHub...
-	Hook was updated at /Users/Walter/.sprintly/commit-msg
+	Hook was updated at <home directory>/.sprintly/commit-msg
 	
 This will automatically update the hook for all repositories in which you have the hook installed.
 	
