@@ -38,7 +38,7 @@ class SprintlyTool:
 	
 		try:
 		
-			usage = 'Usage: %prog [options]\n\nWith no options, your sprintly items will be shown.'
+			usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.'
 			parser = OptionParser(usage=usage)
 			parser.add_option('--install', dest='install', help='install or update this tool', action='store_true', default=False)
 			parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
