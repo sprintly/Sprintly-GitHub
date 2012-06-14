@@ -10,7 +10,8 @@
 	
 	Options:
 	  -h, --help      show this help message and exit
-	  --install       install or update this tool
+	  --install       install this tool
+	  --update        update this tool
 	  --install-hook  install commit-msg hook in current directory (must be a git
 					  repository)
 	  --update-hook   update commit-msg hook in all repositories
@@ -36,9 +37,9 @@ Once the installation is complete, run `sprintly` from any directory to get star
 	Enter sprint.ly API Key: 3536bae19bacd16831fb5100b13e34d2
 	Configuration successfully created.
 
-To update `sprintly`, simply type `sudo sprintly --install`. Note: if you are updating `sprintly`, you may see a warning:
+To update `sprintly`, simply type `sudo sprintly --update`. Note: if you are updating `sprintly`, you may see a warning:
 
-	$ sudo sprintly --install
+	$ sudo sprintly --update
 	Downloading latest version of sprintly tool from GitHub...
 	A file already exists at /usr/bin/sprintly. Overwrite file? 
 	
