@@ -78,7 +78,7 @@ class SprintlyTool:
 			print 'Must be run as root. Try re-running with sudo.'
 			return
 		
-		print "Downloading latest version of sprintly tool from GitHub..."
+		print "Downloading latest version of sprintly from GitHub..."
 		
 		# get the file
 		try:
