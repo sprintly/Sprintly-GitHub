@@ -37,7 +37,7 @@ Once the installation is complete, run `sprintly` from any directory to get star
 	Enter sprint.ly API Key: 3536bae19bacd16831fb5100b13e34d2
 	Configuration successfully created.
 
-To update `sprintly`, simply type `sudo sprintly --update`. Note: if you are updating `sprintly`, you may see a warning:
+To update `sprintly`, type `sudo sprintly --update`. Note: if you are updating `sprintly`, you may see a warning:
 
 	$ sudo sprintly --update
 	Downloading latest version of sprintly tool from GitHub...
@@ -47,7 +47,7 @@ Entering `y` will overwrite the old installation with the latest version. *Note:
 
 #Installing the `commit-msg` hook.
 
-The `sprintly` tool can install the hook for you. Simply navigate to a git repository and run:
+The `sprintly` tool can install the hook for you. Navigate to a git repository and run:
 
 	$ sprintly --install-hook
 	Downloading latest version of commit-msg hook from GitHub...
