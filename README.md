@@ -90,7 +90,7 @@ With the `commit-msg` hook installed, whenever a commit is made and pushed, a co
 	[master 1e71283] References #4. Normal commit message here.
 	 1 files changed, 1 insertions(+), 1 deletions(-)
 	 
-To save time, include an item number at the beginning of your commit to automatically reference that item number. You won't be prompted to select an item number if you go this route:
+To save time, include an item number at the beginning of your commit to automatically reference that item. You won't be prompted to select an item number if you go this route:
 	
 	$ git commit -m "#42 Adding README"
 	[master 555a912] References #42 Adding README
