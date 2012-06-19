@@ -17,26 +17,28 @@ def process(commit_msg_path):
 	commit_msg = commit_msg_file.read()
 	commit_msg_file.close()
 	
-	# if message is already properly formatted, return
-	if validate_message(commit_msg):
-		return
+	# check to see if message is properly formatted
+	valid = validate_message(commit_msg)
+	if valid and len(valid) == 2:
+		new_commit_msg = valid[1]
+	else:
 	
-	# present sprint.ly items to user
-	display_sprintly_items()
-	
-	# prompt user for item(s)
-	items = get_sprintly_items()
-	
-	# check if they opted out
-	if '0' in items:
-		print 'Proceeding without Sprint.ly item number.'
-		return
+		# present sprint.ly items to user
+		display_sprintly_items()
 		
-	# convert items into string
-	items_string = ' '.join(map(lambda x:'References #' + str(x) + '.', items))
-	
-	# create new commit message
-	new_commit_msg = items_string + ' ' + commit_msg
+		# prompt user for item(s)
+		items = get_sprintly_items()
+		
+		# check if they opted out
+		if '0' in items:
+			print 'Proceeding without Sprint.ly item number.'
+			return
+			
+		# convert items into string
+		items_string = ' '.join(map(lambda x:'References #' + str(x) + '.', items))
+		
+		# create new commit message
+		new_commit_msg = items_string + ' ' + commit_msg
 	
 	# save it (overwrite existing)
 	commit_msg_file = open(commit_msg_path, 'w')
@@ -48,28 +50,25 @@ def process(commit_msg_path):
 def validate_message(message):
 	"""
 	If the message passed in already has a sprint.ly keyword and
-	item number, return True.
-	
-	@TODO make more robust.
+	item number, return (True, modified message). Else, False.
 	"""
 
+	messageLower = message.lower()
 	valid_keywords = ['close', 'closes', 'closed', 'fix', 'fixed', 'fixes', 'addresses', 're', 'ref', 'refs', 'references', 'see', 'breaks', 'unfixes', 'reopen', 'reopens', 're-open', 're-opens']	
-	
 	try:
-		parts = message.split(' ', 1)
-		keyword = parts[0].lower()
+		# match pound-number-period.
+		result = re.match('^(#[0-9]+\.).*$', message)
+		if result != None:
+			return (True, 'References ' + message)
 		
-		# if the first word is not a keyboard, not valid
-		if not keyword in valid_keywords:
-			return False
-			
-		# get the next 2 letters to see if they are of the form '#<digit>'
-		number = parts[1][0:2]
-		if not parse_item_number(number):
-			return False
-			
-		return True
+		# match any keyword followed by a pound-number-period
+		pattern = r'.*\b(' + '|'.join(valid_keywords) + r')\b\s(#[0-9]+\.).*'
+		result = re.match(pattern, messageLower)
+		if result != None:
+			return (True, message)
+		
 	except Exception as e:
+		print e
 		pass
 	return False
 	
