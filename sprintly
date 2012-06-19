@@ -323,7 +323,7 @@ class SprintlyTool:
 				print '\t#' +str(item['number']) + ': ' + item['title'][:80] + ' '
 				
 				for child in item['children']:
-					if child['status'] in statuses:
+					if child['status'] in statuses and child['assigned_to'] != None and child['assigned_to']['email'] == self._config['user']:
 						print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]		
 	
 	def sprintlyAPICall(self, url):
