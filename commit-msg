@@ -49,8 +49,14 @@ def process(commit_msg_path):
 	
 def validate_message(message):
 	"""
-	If the message passed in already has a sprint.ly keyword and
-	item number, return (True, modified message). Else, False.
+	If the message contains (at any position) a sprint.ly
+	keyword followed by a space, pound, number, period, then
+	accept the message as is and return (True, message).
+	
+	If the message begins with a pound, number, period, prepend
+	message with 'References ' and return (True, modified message).
+	
+	Otherwise, return false.
 	"""
 
 	messageLower = message.lower()
