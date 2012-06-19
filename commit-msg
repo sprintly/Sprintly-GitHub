@@ -50,10 +50,10 @@ def process(commit_msg_path):
 def validate_message(message):
 	"""
 	If the message contains (at any position) a sprint.ly
-	keyword followed by a space, pound, number, period, then
-	accept the message as is and return (True, message).
+	keyword followed by a space, pound, number, then accept
+	the message as is and return (True, message).
 	
-	If the message begins with a pound, number, period, prepend
+	If the message begins with a pound, number, prepend
 	message with 'References ' and return (True, modified message).
 	
 	Otherwise, return false.
@@ -62,14 +62,14 @@ def validate_message(message):
 	messageLower = message.lower()
 	valid_keywords = ['close', 'closes', 'closed', 'fix', 'fixed', 'fixes', 'addresses', 're', 'ref', 'refs', 'references', 'see', 'breaks', 'unfixes', 'reopen', 'reopens', 're-open', 're-opens']	
 	try:
-		# match pound-number-period.
-		result = re.match('^(#[0-9]+\.).*$', message)
+		# match pound-number-(space or period)
+		result = re.match('^(#[0-9]+[\.\s$]).*$', message)
 		if result != None:
 			return (True, 'References ' + message)
 		
-		# match any keyword followed by a pound-number-period
-		pattern = r'.*\b(' + '|'.join(valid_keywords) + r')\b\s(#[0-9]+\.).*'
-		result = re.match(pattern, messageLower)
+		# match any keyword followed by a pound-number-(space or period)
+		pattern = r'.*\b(' + '|'.join(valid_keywords) + r')\b\s(#[0-9]+[\.\s]).*'
+		result = re.match(pattern, messageLower + '.') # add period until regex can be updated - won't affect actual message
 		if result != None:
 			return (True, message)
 		
