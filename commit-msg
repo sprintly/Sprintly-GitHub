@@ -68,8 +68,8 @@ def validate_message(message):
 			return (True, 'References ' + message)
 		
 		# match any keyword followed by a pound-number-(space or period)
-		pattern = r'.*\b(' + '|'.join(valid_keywords) + r')\b\s(#[0-9]+[\.\s]).*'
-		result = re.match(pattern, messageLower + '.') # add period until regex can be updated - won't affect actual message
+		pattern = r'.*\b(' + '|'.join(valid_keywords) + r')\b\s(#[0-9]+([\.\s]|$)).*'
+		result = re.match(pattern, messageLower)
 		if result != None:
 			return (True, message)
 		
