@@ -269,7 +269,7 @@ class SprintlyTool:
 				product_id = str(product['id'])
 				product_name_with_url = '\'' + product_name + '\' (https://sprint.ly/product/' + product_id + '/)'
 				
-				# get the top-level items
+				# get all items assigned to current user
 				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
 				if not items:
 					raise SprintlyException('Unable to get items for ' + product_name_with_url)
@@ -305,6 +305,8 @@ class SprintlyTool:
 						
 						# if we have the parent, nest under parent
 						if parentNumber in itemsMap:
+						
+							# we sorted items above to ensure all parents will be in map before any child is encountered
 							parent = itemsMap[parentNumber]
 							if 'children' not in parent:
 								parent['children'] = []
