@@ -270,7 +270,7 @@ class SprintlyTool:
 				product_name_with_url = '\'' + product_name + '\' (https://sprint.ly/product/' + product_id + '/)'
 				
 				# get the top-level items
-				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&limit=100')
+				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
 				if not items:
 					raise SprintlyException('Unable to get items for ' + product_name_with_url)
 
@@ -284,20 +284,38 @@ class SprintlyTool:
 					print 'Warning: unable to get items for ' + product_name_with_url + message
 					continue
 				
-				# get the children of each item
+				# sort so that items without children appear first (used to ensure we have parent before child below)
+				items.sort(key=lambda x:1 if 'parent' in x else 0)
+				
+				# turn flat list into tree
+				itemsTree = []
+				itemsMap = {}
+				
 				for item in items:
-					item_id = str(item['number'])
-					children = self.sprintlyAPICall('products/' + product_id + '/items/' + item_id + '/children.json')
-					if not children:
-						item['children'] = []
+					number = str(item['number'])
+				
+					# if item is not a child
+					if 'parent' not in item:
+						itemsTree.append(item)
+						itemsMap[number] = item
+					
+					# if item is a child...
 					else:
-						# sort children by number (highest first)
-						children.sort(key=lambda x:x['number'], reverse=True)
-						item['children'] = children
+						parentNumber = str(item['parent'])
+						
+						# if we have the parent, nest under parent
+						if parentNumber in itemsMap:
+							parent = itemsMap[parentNumber]
+							if 'children' not in parent:
+								parent['children'] = []
+							parent['children'].append(item)
+						# if we don't have the parent, display as top level
+						else:
+							itemsTree.append(item)
 				
 				# sort items by (first child, if it exists, else number)
-				items.sort(key=lambda x:x['children'][0]['number'] if x['children'] else x['number'], reverse=True)
-				product['items'] = items
+				itemsTree.sort(key=lambda x:x['children'][0]['number'] if 'children' in x else x['number'], reverse=True)
+				product['items'] = itemsTree
 				cache['products'].append(product)
 		
 			serialized_cache = json.dumps(cache)
@@ -325,9 +343,7 @@ class SprintlyTool:
 			raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
 		updated_at = cache['updated_at']
 		products = cache['products']
-			
-		statuses = ['in-progress', 'backlog']
-		
+					
 		for product in products:
 			name = product['name']
 			id = str(product['id'])
@@ -337,8 +353,8 @@ class SprintlyTool:
 			for item in items:
 				print '\t#' +str(item['number']) + ': ' + item['title'][:80] + ' '
 				
-				for child in item['children']:
-					if child['status'] in statuses and child['assigned_to'] != None and child['assigned_to']['email'] == self._config['user']:
+				if 'children' in item:
+					for child in item['children']:
 						print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]		
 	
 	def sprintlyAPICall(self, url):
