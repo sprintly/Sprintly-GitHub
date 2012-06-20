@@ -265,16 +265,23 @@ class SprintlyTool:
 			# iterate over products
 			for product in products:
 			
+				product_name = product['name']
 				product_id = str(product['id'])
+				product_name_with_url = '\'' + product_name + '\' (https://sprint.ly/product/' + product_id + '/)'
 				
 				# get the top-level items
 				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&limit=100')
 				if not items:
-					raise SprintlyException('Unable to get items for ' + str(product_id))
+					raise SprintlyException('Unable to get items for ' + product_name_with_url)
 
 				# check to see if this was an error message (product is archived, for example)
 				# only error messages (currently) have codes, so this is a definitive check
 				if 'code' in items:
+					# include message if applicable
+					message = ''
+					if 'message' in items:
+						message = ': ' + items['message']
+					print 'Warning: unable to get items for ' + product_name_with_url + message
 					continue
 				
 				# get the children of each item
