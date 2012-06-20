@@ -12,9 +12,6 @@ def process(commit_msg_path):
 	Exception is the best way to exit in case of error.
 	"""
 	
-	# enable user input
-	sys.stdin = open ('/dev/tty', 'r')
-	
 	# read in commit message
 	commit_msg_file = open(commit_msg_path, 'r')
 	commit_msg = commit_msg_file.read()
@@ -101,7 +98,10 @@ def get_sprintly_items():
 	integers are allowed. It is acceptable for integers
 	to be preceded by a # symbol.
 	"""
-		
+	
+	# enable user input
+	sys.stdin = open ('/dev/tty', 'r')
+	
 	while True:
 		sprintly_items = raw_input('Enter 1 or more item numbers separated by a space: ').split(' ')		
 		result = map(lambda x:parse_item_number(x), sprintly_items)
