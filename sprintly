@@ -261,7 +261,7 @@ class SprintlyTool:
 			products = self.sprintlyAPICall('products.json')
 			if not products:
 				raise SprintlyException('Unable to get product list.')
-			
+
 			# iterate over products
 			for product in products:
 			
@@ -271,6 +271,11 @@ class SprintlyTool:
 				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&limit=100')
 				if not items:
 					raise SprintlyException('Unable to get items for ' + str(product_id))
+
+				# check to see if this was an error message (product is archived, for example)
+				# only error messages (currently) have codes, so this is a definitive check
+				if 'code' in items:
+					continue
 				
 				# get the children of each item
 				for item in items:
@@ -307,7 +312,10 @@ class SprintlyTool:
 		serialized_cache = cache_file.readline()
 		cache_file.close()
 		
-		cache = json.loads(serialized_cache)
+		try:
+			cache = json.loads(serialized_cache)
+		except Exception:
+			raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
 		updated_at = cache['updated_at']
 		products = cache['products']
 			
@@ -341,6 +349,9 @@ class SprintlyTool:
 			req.add_header('Authorization', userData)
 			res = urllib2.urlopen(req)
 			response = res.read()
+			return json.loads(response)
+		except urllib2.HTTPError, error:
+			response = error.read()
 			return json.loads(response)
 		except Exception:
 			return False
@@ -391,7 +402,7 @@ class SprintlyTool:
 			if gitEmail != self._config['user']:
 				print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
 				print 'WARNING: If your git email does not match your sprint.ly username, sprint.ly won\'t be able to process this commit.'
-		except Exception as e:
+		except Exception:
 			print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
 		
 	def updateHook(self):
