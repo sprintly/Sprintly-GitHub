@@ -146,7 +146,7 @@ class SprintlyTool:
 		# set the sprintly config path (create if it doesn't exist)
 		self._sprintlyConfigPath = self._sprintlyDirectoryPath + '/sprintly.config'
 		if not os.path.isfile(self._sprintlyConfigPath):
-			self.createSprintlyConfig(self._sprintlyConfigPath)
+			self.createSprintlyConfig()
 		
 		# set the sprintly cache path (create if it doesn't exist)
 		self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
@@ -160,22 +160,34 @@ class SprintlyTool:
 
 		self.loadFromConfig()
 
-	def createSprintlyConfig(self, path, update = False):
+	def createSprintlyConfig(self, update = False):
 		"""
 		Create the sprint.ly config. Prompt user for all necessary values.
 		
 		When 'update' is set to True and an existing value is present for
 		a given configuration item, allow user to keep old value.
 		"""
-				
-		print 'Creating config...'
 		
+		if not update:
+			print 'Creating config...'
+		else:
+			print 'Updating config... Press enter to accept default value shown in brackets.'
 		# user (email address)
-		user = raw_input('Enter sprint.ly account (email): ')
+		if update and 'user' in self._config:
+			user = raw_input('Enter sprint.ly username (email) [%s]: ' % self._config['user'])
+			if not user:
+				user = self._config['user']
+		else:
+			user = raw_input('Enter sprint.ly username (email): ')
 		self._config['user'] = user
 		
 		# key (sprintly api key)
-		key  = raw_input('Enter sprint.ly API Key: ')
+		if update and 'key' in self._config:
+			key  = raw_input('Enter sprint.ly API Key [%s]: ' % self._config['key'])
+			if not key:
+				key = self._config['key']
+		else:
+			key  = raw_input('Enter sprint.ly API Key: ')
 		self._config['key'] = key
 		
 		# try and use API with these values to determine validity
@@ -192,12 +204,15 @@ class SprintlyTool:
 		serialized_config = json.dumps(self._config)
 		
 		try:
-			config_file = open(path, 'w')
+			config_file = open(self._sprintlyConfigPath, 'w')
 			config_file.write(serialized_config)
 			config_file.close()
-			print 'Configuration successfully created.'
+			if not update:
+				print 'Configuration successfully created.'
+			else:
+				print 'Configuration successfully updated.'
 		except:
-			raise SprintlyException('Unable to write configuration to disk at ' + path)
+			raise SprintlyException('Unable to write configuration to disk at ' + self._sprintlyConfigPath)
 		
 	def loadFromConfig(self):
 		"""
@@ -219,7 +234,7 @@ class SprintlyTool:
 		"""
 		Lists all items for the current user from the sprint.ly api.
 		"""
-		
+
 		# populate the cache from the API if possible (may not be possible,
 		# e.g. in the case of offline access)
 		self.populateCache()
