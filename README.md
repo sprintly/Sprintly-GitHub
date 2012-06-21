@@ -58,7 +58,7 @@ The `sprintly` tool can install the hook for you. Navigate to a git repository a
 	Creating symlink...
 	Hook was installed at <repository>/.git/hooks/commit-msg
 	
-*Note: the hook installed is actually a symbolic link to a shared copy of the hook found at /usr/local/share/sprintly/commit-msg. By doing this, the hook can be easily update for all users and all repositories simply by calling `sprintly --update`.*
+*Note: the hook installed is actually a symbolic link to a shared copy of the hook found at /usr/local/share/sprintly/commit-msg. By doing this, the hook can be easily updated for all users and all repositories by calling `sprintly --update`.*
 	
 #Changing the Configuration
 
