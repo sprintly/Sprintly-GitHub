@@ -69,7 +69,7 @@ This will automatically update the hook for all repositories in which you have t
 
 #Changing the Configuration
 
-If, at some point, you wish to change your configuration (you get a new username, API key, or wish to change the default product), type `sprintly --update-config`. Pro tip: you don't have to re-type everything just to change your API Key. Simple press enter to keep the old version of any individual item:
+If, at some point, you wish to change your configuration (you get a new username, API key, or wish to change the default product), type `sprintly --update-config`. Pro tip: you don't have to re-type everything just to change your API Key. Simply press enter to keep the old version of any individual item:
 
 	$ sprintly --update-config
 	Updating config... Press enter to accept default value shown in brackets.
