@@ -58,6 +58,8 @@ The `sprintly` tool can install the hook for you. Navigate to a git repository a
 	Creating symlink...
 	Hook was installed at <repository>/.git/hooks/commit-msg
 	
+*Note: the hook installed is actually a symbolic link to a shared copy of the hook found at /usr/local/share/sprintly/commit-msg. By doing this, the hook can be easily update for all users and all repositories simply by calling `sprintly --update`.*
+	
 #Changing the Configuration
 
 If, at some point, you wish to change your configuration (you get a new username, API key, or wish to change the default product), type `sprintly --update-config`. Pro tip: you don't have to re-type everything just to change your API Key. Simply press enter to keep the old version of any individual item:
