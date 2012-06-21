@@ -466,7 +466,17 @@ class SprintlyTool:
 		
 		print 'Hook was updated at ' + commit_msg_path	
 		return commit_msg_path
-		
+	
+class SprintlyException(Exception):
+	"""
+	Exception used to pass known exceptions throughout
+	the sprintly tool.
+	"""
+	def __init__(self, value):
+		self.value = value
+	def __str__(self):
+		return repr(self.value)
+
 def die(message = None):
 	"""
 	Prints the message, if present, and then exits.
@@ -476,12 +486,6 @@ def die(message = None):
 		print message
 	print 'Program exiting.'
 	sys.exit(1)
-	
-class SprintlyException(Exception):
-	def __init__(self, value):
-		self.value = value
-	def __str__(self):
-		return repr(self.value)
 	
 if __name__ == '__main__':
 	sprintlyTool = SprintlyTool()
