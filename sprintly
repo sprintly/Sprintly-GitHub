@@ -158,6 +158,7 @@ class SprintlyTool:
 			except Exception:
 				raise SprintlyException('Unable to create file at ' + self._sprintlyCachePath)
 
+		# load config values
 		self.loadFromConfig()
 
 	def createSprintlyConfig(self, update = False):
@@ -166,6 +167,10 @@ class SprintlyTool:
 		
 		When 'update' is set to True and an existing value is present for
 		a given configuration item, allow user to keep old value.
+		
+		Note: if update is True, this must be called after initialize. Failure
+		to do so wil result in a new config being created, as the values in
+		self._config will not yet be set.
 		"""
 		
 		if not update:
