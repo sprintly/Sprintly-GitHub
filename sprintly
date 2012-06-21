@@ -56,9 +56,10 @@ class SprintlyTool:
 			
 			(options, args) = parser.parse_args()
 		
-			# if the user wants to install, do it first
+			# if the user wants to install, do it before we initialize (they will re-run once installed)
 			if options.install:
 				self.install()
+				print 'Type sprintly to get started.'
 				return;
 				
 			# ensure that the ~/.sprintly/ folder exists, we have credentials, etc
