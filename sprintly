@@ -178,6 +178,7 @@ class SprintlyTool:
 		else:
 			print 'Updating config... Press enter to accept default value shown in brackets.'
 		
+		# used to simplify prompting user with optional default
 		def getConfigItem(message, default = None):
 			if default:
 				item = raw_input('%s [%s]: ' % (message, default))
@@ -186,12 +187,7 @@ class SprintlyTool:
 			else:
 				item = raw_input('%s: ' % message)
 			return item
-			
-		configItems = [
-			('user', 'Enter sprint.ly username (email)'),
-			('key', 'Enter sprint.ly API Key'),
-		]
-		
+
 		# prompt for user
 		name = 'user'
 		message = 'Enter sprint.ly username (email)'
@@ -210,7 +206,7 @@ class SprintlyTool:
 
 		# try and use API with these values to determine validity
 		response = self.sprintlyAPICall('user/whoami.json')
-		if not response:
+		if not response or 'code' in response:
 			raise SprintlyException('Invalid credentials. Unable to authenticate with sprint.ly.')
 		if response['email'] != self._config['user']:
 			raise SprintlyException('Invalid credentials. Please ensure you are using your own API Key.')
@@ -218,6 +214,34 @@ class SprintlyTool:
 		# add user id to config
 		self._config['id'] = response['id']
 		
+		# get a list of products and prompt user for default product if more than 1
+		print 'Retrieving list of Sprint.ly products...'
+		products = self.sprintlyAPICall('products.json')
+		if not products:
+			raise SprintlyException('Unable to get product list.')
+		productMap = {}
+		for product in products:
+			name = product['name']
+			id = str(product['id'])
+			productMap[id] = name
+		productCount = len(productMap)
+		if productCount == 0:
+			raise SprintlyException('It appears that you have no products associated with your Sprint.ly account. Please add at least one and then try again.')
+		elif productCount == 1:
+			self._config['product'] = productMap.keys()[0]
+		else:
+			# prompt user for a product until they enter one found in the map
+			productList = ', '.join(['%s - %s' % (k,v) for k,v in productMap.items()])
+			defaultProduct = "0"
+			while defaultProduct not in productMap.keys():
+				name = 'product'
+				message = 'Enter default sprint.ly product id (%s)' % productList
+				if update and name in self._config:
+					defaultProduct = getConfigItem(message, self._config[name])
+				else:
+					defaultProduct = getConfigItem(message)
+			self._config['product'] = defaultProduct
+	
 		# write config file if all is good
 		serialized_config = json.dumps(self._config)
 		
