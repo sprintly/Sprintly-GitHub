@@ -5,7 +5,7 @@
 #How to use `sprintly`
 
 	Usage: sprintly [options]
-
+	
 	By default, your sprintly items will be shown.
 	
 	Options:
@@ -14,8 +14,7 @@
 	  --update         update this tool
 	  --install-hook   install commit-msg hook in current directory (must be a git
 					   repository)
-	  --update-hook    update commit-msg hook in all repositories
-	  --update-config  used to edit configuration
+	  --update-config  edit configuration
 	  
 #Installing `sprintly`
 
@@ -59,14 +58,6 @@ The `sprintly` tool can install the hook for you. Navigate to a git repository a
 	Creating symlink...
 	Hook was installed at <repository>/.git/hooks/commit-msg
 	
-You can update the hook periodically by running:
-
-	$ sprintly --update-hook
-	Downloading latest version of commit-msg hook from GitHub...
-	Hook was updated at <home directory>/.sprintly/commit-msg
-	
-This will automatically update the hook for all repositories in which you have the hook installed.
-
 #Changing the Configuration
 
 If, at some point, you wish to change your configuration (you get a new username, API key, or wish to change the default product), type `sprintly --update-config`. Pro tip: you don't have to re-type everything just to change your API Key. Simply press enter to keep the old version of any individual item:

@@ -518,7 +518,7 @@ class SprintlyTool:
 				os.mkdir(HOOK_DIR, 0777)
 		except Exception:
 			raise SprintlyException('Unable to create directory ' + HOOK_DIR)
-			
+
 		# save the file		
 		try:		
 			commit_msg_file = open(HOOK_PATH, 'w')
