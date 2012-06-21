@@ -85,7 +85,7 @@ def display_sprintly_items():
 	"""
 	
 	try:
-		subprocess.call(['sprintly'])
+		subprocess.call(['sprintly'], stdin=open('/dev/tty', 'r'))
 	except:
 		print 'Command-line tool \'sprintly\' not found. Please ensure it is installed and on your path.'
 	
