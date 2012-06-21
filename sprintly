@@ -50,15 +50,15 @@ class SprintlyTool:
 			usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.'
 			parser = OptionParser(usage=usage)
 			parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
-			parser.add_option('--update', dest='install', help='update this tool', action='store_true', default=False)
+			parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
 			parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
 			parser.add_option('--update-config', dest='updateConfig', help='edit configuration', action='store_true', default=False)
 			
 			(options, args) = parser.parse_args()
 		
 			# if the user wants to install, do it before we initialize (they will re-run once installed)
-			if options.install:
-				self.install()
+			if options.install or options.update:
+				self.install(options.update)
 				return;
 				
 			# ensure that the ~/.sprintly/ folder exists, we have credentials, etc
@@ -75,7 +75,7 @@ class SprintlyTool:
 		except Exception as e:
 			die('Fatal Error: ' + str(e))
 	
-	def install(self):
+	def install(self, update):
 		"""
 		Install this tool at SPRINTLY_PATH. If another file already
 		exists with the same name, user will be prompted to replace the file.
@@ -134,9 +134,11 @@ class SprintlyTool:
 		# except update the hook too
 		self.updateHook()
 
-		print ''
-		print 'That\'s all! Type \'sprintly\' to get started.'
-		print ''
+		# if this is not an update, install
+		if not update:
+			print ''
+			print 'That\'s all! Type \'sprintly\' to get started.'
+			print ''
 				
 	def initialize(self):
 		"""
