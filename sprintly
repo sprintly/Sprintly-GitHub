@@ -44,6 +44,7 @@ class SprintlyTool:
 			parser.add_option('--update', dest='install', help='update this tool', action='store_true', default=False)
 			parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
 			parser.add_option('--update-hook', dest='updateHook', help='update commit-msg hook in all repositories', action='store_true', default=False)
+			parser.add_option('--update-config', dest='updateConfig', help='used to edit configuration', action='store_true', default=False)
 			
 			(options, args) = parser.parse_args()
 		
@@ -60,6 +61,8 @@ class SprintlyTool:
 				self.installHook()
 			elif options.updateHook:
 				self.updateHook()
+			elif options.updateConfig:
+				self.updateConfig()
 			else:
 				self.listSprintlyItems()
 	
@@ -271,7 +274,14 @@ class SprintlyTool:
 	
 		except:
 			raise SprintlyException('Unable to read credentials from disk at ' + path)
-			
+	
+	def updateConfig(self):
+		"""
+		Prompt user to update configuration settings.
+		Defaults will be original config values if present.
+		"""
+		self.createSprintlyConfig(True)
+	
 	def listSprintlyItems(self):
 		"""
 		Lists all items for the current user from the sprint.ly api.
