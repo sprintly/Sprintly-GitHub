@@ -12,11 +12,17 @@ from optparse import OptionParser
 from stat import S_IXUSR
 
 # constants
-CONFIG_VERSION = "2"
-SPRINTLY_PATH = '/usr/local/bin/sprintly'
-HOOK_PATH = '/usr/local/share/sprintly/commit-msg'
+CONFIG_VERSION        = "2"
+SPRINTLY_NAME         = 'sprintly'
+SPRINTLY_DIR          = '/usr/local/bin/'
+HOOK_NAME             = 'commit-msg'
+HOOK_DIR              = '/usr/local/share/sprintly/'
 SPRINTLY_SOURCE_URL   = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly"
 COMMIT_MSG_SOURCE_URL = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg"
+
+# non-editable constants
+SPRINTLY_PATH         = SPRINTLY_DIR + SPRINTLY_NAME
+HOOK_PATH             = HOOK_DIR + HOOK_NAME
 
 class SprintlyTool:
 	"""
@@ -46,8 +52,7 @@ class SprintlyTool:
 			parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
 			parser.add_option('--update', dest='install', help='update this tool', action='store_true', default=False)
 			parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
-			parser.add_option('--update-hook', dest='updateHook', help='update commit-msg hook in all repositories', action='store_true', default=False)
-			parser.add_option('--update-config', dest='updateConfig', help='used to edit configuration', action='store_true', default=False)
+			parser.add_option('--update-config', dest='updateConfig', help='edit configuration', action='store_true', default=False)
 			
 			(options, args) = parser.parse_args()
 		
@@ -62,8 +67,6 @@ class SprintlyTool:
 			# run the requested option (note: install is handled above)
 			if options.installHook:
 				self.installHook()
-			elif options.updateHook:
-				self.updateHook()
 			elif options.updateConfig:
 				self.updateConfig()
 			else:
@@ -128,6 +131,9 @@ class SprintlyTool:
 			
 		# done!
 		print 'Successfully installed sprintly to ' + target
+		
+		# except update the hook too
+		self.updateHook()
 				
 	def initialize(self):
 		"""
@@ -443,8 +449,7 @@ class SprintlyTool:
 		
 	def installHook(self):
 		"""
-		First calls updateHook. Once downloaded, a symlink will be
-		created between the <current directory>/.git/hooks/commit-msg
+		A symlink will be created between the <current directory>/.git/hooks/commit-msg
 		and ~/.sprintly/commit-msg
 		"""
 		
@@ -454,8 +459,9 @@ class SprintlyTool:
 		if not os.path.isdir(hooks_directory):
 			raise SprintlyException('This command can only be run from the root of a git repository.')
 		
-		# get the latest version of the hook
-		source = self.updateHook()
+		# ensure hook is installed
+		if not os.path.isfile(HOOK_PATH):
+			raise SprintlyException('Please run \'sprintly --update\' first to install the hook.')
 		
 		# create a symlink to the commit-msg file
 		destination = hooks_directory + 'commit-msg'
@@ -472,7 +478,7 @@ class SprintlyTool:
 		print 'Creating symlink...'
 		
 		try:
-			os.symlink(source, destination)
+			os.symlink(HOOK_PATH, destination)
 		except Exception:
 			raise SprintlyException('Unable to create symlink.')
 		
@@ -506,26 +512,28 @@ class SprintlyTool:
 		except Exception:
 			raise SprintlyException('Unable to obtain commit-msg from ' + COMMIT_MSG_SOURCE_URL)
 		
+		# ensure directory exists
+		try:
+			if not os.path.exists(HOOK_DIR):
+				os.mkdir(HOOK_DIR, 0777)
+		except Exception:
+			raise SprintlyException('Unable to create directory ' + HOOK_DIR)
+			
 		# save the file		
-		if self._sprintlyDirectoryPath:
-			try:
-				commit_msg_path = self._sprintlyDirectoryPath + 'commit-msg'
-				commit_msg_file = open(commit_msg_path, 'w')
-				commit_msg_file.write(commit_msg_file_contents)
-				commit_msg_file.close()
-			except Exception:
-				raise SprintlyException('Unable to save file to ' + self._sprintlyDirectoryPath)
-		else:
-			raise SprintlyException('Unable to find users home directory.')
+		try:		
+			commit_msg_file = open(HOOK_PATH, 'w')
+			commit_msg_file.write(commit_msg_file_contents)
+			commit_msg_file.close()
+		except Exception:
+			raise SprintlyException('Unable to save file to ' + HOOK_PATH)
 	
 		# make sure user can read, write, and execute
 		try:
-			os.chmod(commit_msg_path, 0777)
+			os.chmod(HOOK_PATH, 0777)
 		except Exception:
-			raise SprintlyException('Unable to make ' + commit_msg_path + ' executable.')
+			raise SprintlyException('Unable to make ' + HOOK_PATH + ' executable.')
 		
-		print 'Hook was updated at ' + commit_msg_path	
-		return commit_msg_path
+		print 'Hook was updated at ' + HOOK_PATH	
 	
 class SprintlyException(Exception):
 	"""
