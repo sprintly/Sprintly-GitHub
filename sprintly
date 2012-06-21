@@ -179,26 +179,27 @@ class SprintlyTool:
 			print 'Updating config... Press enter to accept default value shown in brackets.'
 		
 		def getConfigItem(message, default = None):
-			"""
-			Prompts user with message. Will present default if present
-			and return it if the user enters nothing (presses enter).
-			
-			Note: message will have a colon (:) appended to end, so don't include one!
-			"""
 			if default:
 				item = raw_input('%s [%s]: ' % (message, default))
 				if not item:
 					item = default
 			else:
 				item = raw_input('%s: ' % message)
-			
 			return item
-				
-		# user (email address)
-		self._config['user'] = getConfigItem('Enter sprint.ly username (email)')
+			
+		configItems = [
+			('user', 'Enter sprint.ly username (email)'),
+			('key', 'Enter sprint.ly API Key'),
+		]
 		
-		# key (sprintly api key)
-		self._config['key'] = getConfigItem('Enter sprint.ly API Key')
+		# prompt user for each config item
+		for configItem in configItems:
+			name = configItem[0]
+			message = configItem[1]
+			if update and name in self._config:
+				self._config[name] = getConfigItem(message, self._config[name])
+			else:
+				self._config[name] = getConfigItem(message)
 
 		# try and use API with these values to determine validity
 		response = self.sprintlyAPICall('user/whoami.json')
