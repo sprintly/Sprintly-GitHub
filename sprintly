@@ -241,7 +241,7 @@ class SprintlyTool:
 			while defaultProductId not in productMap.keys():
 				message = 'Enter default sprint.ly product id (%s)' % productList
 				if update and 'product' in self._config:
-					defaultProductId = getConfigItem(message, self._config['product']['id'])
+					defaultProductId = getConfigItem(message, str(self._config['product']['id']))
 				else:
 					defaultProductId = getConfigItem(message)
 			self._config['product'] = productMap[defaultProductId]
