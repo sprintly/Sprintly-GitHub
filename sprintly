@@ -293,10 +293,14 @@ class SprintlyTool:
 			cache['updated_at'] = time()
 			cache['products'] = []
 			
-			# get a list of products for the current user
-			products = self.sprintlyAPICall('products.json')
-			if not products:
-				raise SprintlyException('Unable to get product list.')
+			# use product from config file if available
+			if 'product' in self._config:
+				products.append(self._config['product'])
+			# else get products from the API
+			else:
+				products = self.sprintlyAPICall('products.json')
+				if not products:
+					raise SprintlyException('Unable to get product list.')
 
 			# iterate over products
 			for product in products:
