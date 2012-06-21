@@ -284,8 +284,10 @@ class SprintlyTool:
 					print 'Warning: unable to get items for ' + product_name_with_url + message
 					continue
 				
-				# sort so that items without children appear first (used to ensure we have parent before child below)
-				items.sort(key=lambda x:1 if 'parent' in x else 0)
+				# a 'parent' is any item without a parent key
+				# a 'child' is any item with a parent key
+				# sort so that all parents appear first and all children appear after ordered by their number
+				items.sort(key=lambda item:item['number'] if 'parent' in item else sys.maxint, reverse=True)
 				
 				# turn flat list into tree
 				itemsTree = []
