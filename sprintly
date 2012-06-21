@@ -131,43 +131,35 @@ class SprintlyTool:
 		also be created during this step.
 		"""
 					
-		self.setSprintlyDirectoryPath()
-		self.setSprintlyConfigPath()
-		self.setSprintlyCachePath()
-		self.loadFromConfig()
-	
-	def setSprintlyDirectoryPath(self):
-		"""
-		Set the sprint.ly directory path.
-		"""
-			
 		# get the users home directory
 		home = os.path.expanduser('~')
 		if home == '~':
 			raise SprintlyException('Unable to expand home directory.')
 	
+		# set the sprintly directory path (create if it doesn't exist)
 		self._sprintlyDirectoryPath = home + '/.sprintly/'
 		if not os.path.isdir(self._sprintlyDirectoryPath):
-			self.createSprintlyDirectory(self._sprintlyDirectoryPath)
+			os.mkdir(self._sprintlyDirectoryPath, 0700)
+			if not os.path.isdir(self._sprintlyDirectoryPath):
+				raise SprintlyException('Unable to create folder at ' + self._sprintlyDirectoryPath)
 		
-	def createSprintlyDirectory(self, path):
-		"""
-		Create the sprint.ly directory.
-		"""
-		
-		os.mkdir(path, 0700)
-		if not os.path.isdir(path):
-			raise SprintlyException('Unable to create folder at ' + path)
-			
-	def setSprintlyConfigPath(self):
-		"""
-		Set the sprint.ly config path.
-		"""
-			
+		# set the sprintly config path (create if it doesn't exist)
 		self._sprintlyConfigPath = self._sprintlyDirectoryPath + '/sprintly.config'
 		if not os.path.isfile(self._sprintlyConfigPath):
 			self.createSprintlyConfig(self._sprintlyConfigPath)
-			
+		
+		# set the sprintly cache path (create if it doesn't exist)
+		self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
+		if not os.path.isfile(self._sprintlyCachePath):
+			try:
+				cache_file = open(self._sprintlyCachePath, 'w')
+				cache_file.write('')
+				cache_file.close()
+			except Exception:
+				raise SprintlyException('Unable to create file at ' + self._sprintlyCachePath)
+
+		self.loadFromConfig()
+
 	def createSprintlyConfig(self, path):
 		"""
 		Create the sprint.ly config. User will be prompted
@@ -200,25 +192,6 @@ class SprintlyTool:
 			print 'Configuration successfully created.'
 		except:
 			raise SprintlyException('Unable to write configuration to disk at ' + path)
-	
-	def setSprintlyCachePath(self):
-		"""
-		Set the sprint.ly cache path.
-		"""
-			
-		self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
-		if not os.path.isfile(self._sprintlyCachePath):
-			self.createSprintlyCache(self._sprintlyCachePath)
-			
-	def createSprintlyCache(self, path):
-		"""
-		Create the sprint.ly cache.
-		"""
-		
-		# create empty cache
-		cache_file = open(path, 'w')
-		cache_file.write('')
-		cache_file.close()
 		
 	def loadFromConfig(self):
 		"""
