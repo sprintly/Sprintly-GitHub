@@ -9,12 +9,13 @@
 	By default, your sprintly items will be shown.
 	
 	Options:
-	  -h, --help      show this help message and exit
-	  --install       install this tool
-	  --update        update this tool
-	  --install-hook  install commit-msg hook in current directory (must be a git
-					  repository)
-	  --update-hook   update commit-msg hook in all repositories
+	  -h, --help       show this help message and exit
+	  --install        install this tool
+	  --update         update this tool
+	  --install-hook   install commit-msg hook in current directory (must be a git
+					   repository)
+	  --update-hook    update commit-msg hook in all repositories
+	  --update-config  used to edit configuration
 	  
 #Installing `sprintly`
 
@@ -32,12 +33,15 @@ The `sprintly` tool can now install itself. Follow the instructions below to get
 Once the installation is complete, run `sprintly` from any directory to get started. If you have never used the tool before, it will walk you through adding your Sprint.ly credentials:
 
 	$ sprintly
-	Config not found. Creating config...
-	Enter sprint.ly account (email): user@company.com
+	Creating config...
+	Enter sprint.ly username (email): user@company.com
 	Enter sprint.ly API Key: 3536bae19bacd16831fb5100b13e34d2
+	Enter default sprint.ly product id (117 - Company, 129 - Secret): 117
 	Configuration successfully created.
+	
+*Note: you will only be asked to enter a sprint.ly product id if you have more than one product.*
 
-To update `sprintly`, type `sudo sprintly --update`. Note: if you are updating `sprintly`, you may see a warning:
+To update `sprintly`, type `sudo sprintly --update`. When updating, you will see a warning:
 
 	$ sudo sprintly --update
 	Downloading latest version of sprintly tool from GitHub...
@@ -62,7 +66,18 @@ You can update the hook periodically by running:
 	Hook was updated at <home directory>/.sprintly/commit-msg
 	
 This will automatically update the hook for all repositories in which you have the hook installed.
-	
+
+#Changing the Configuration
+
+If, at some point, you wish to change your configuration (you get a new username, API key, or wish to change the default product), type `sprintly --update-config`. Pro tip: you don't have to re-type everything just to change your API Key. Simple press enter to keep the old version of any individual item:
+
+	$ sprintly --update-config
+	Updating config... Press enter to accept default value shown in brackets.
+	Enter sprint.ly username (email) [user@company.com]: 
+	Enter sprint.ly API Key [3536bae19bacd16831fb5100b13e34d2]: 5c11931f26b4c5f6a435983d1a734839
+	Enter default sprint.ly product id (117 - Company, 129 - Secret): 
+	Configuration successfully updated.
+
 #Sample Output
 
 Let's run through a few examples of how to take advantage of this tool.
