@@ -12,6 +12,7 @@ from optparse import OptionParser
 from stat import S_IXUSR
 
 # constants
+CONFIG_VERSION = "1"
 SPRINTLY_SOURCE_URL   = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly"
 COMMIT_MSG_SOURCE_URL = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg"
 
@@ -181,6 +182,9 @@ class SprintlyTool:
 		else:
 			print 'Updating config... Press enter to accept default value shown in brackets.'
 		
+		# set version
+		self._config['version'] = CONFIG_VERSION
+		
 		# used to simplify prompting user with optional default
 		def getConfigItem(message, default = None):
 			if default:
@@ -261,20 +265,22 @@ class SprintlyTool:
 		
 	def loadFromConfig(self):
 		"""
-		Load user and key from the config file.
+		Load user and key from the config file. Validate here that the version
+		of this config is readable by this version of the tool.
 		"""
 				
 		try:
-		
 			config_file = open(self._sprintlyConfigPath, 'r')
 			serialized_config = config_file.readline()
 			config_file.close()
-			
 			self._config = json.loads(serialized_config)
-	
 		except:
-			raise SprintlyException('Unable to read credentials from disk at ' + path)
-	
+			raise SprintlyException('Unable to read credentials from disk at ' + self._sprintlyConfigPath)			
+				
+		# validate version
+		if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
+			raise SprintlyException('Please run \'sprintly --update-config\' to upgrade your configuration file.')
+
 	def updateConfig(self):
 		"""
 		Prompt user to update configuration settings.
