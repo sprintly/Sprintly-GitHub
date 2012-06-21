@@ -316,7 +316,7 @@ class SprintlyTool:
 							itemsTree.append(item)
 				
 				# sort items by (first child, if it exists, else number)
-				itemsTree.sort(key=lambda x:x['children'][0]['number'] if 'children' in x else x['number'], reverse=True)
+				itemsTree.sort(key=lambda item:item['children'][0]['number'] if 'children' in item else item['number'], reverse=True)
 				product['items'] = itemsTree
 				cache['products'].append(product)
 		
