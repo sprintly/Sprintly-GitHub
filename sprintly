@@ -177,29 +177,34 @@ class SprintlyTool:
 			print 'Creating config...'
 		else:
 			print 'Updating config... Press enter to accept default value shown in brackets.'
+		
+		def getConfigItem(message, default = None):
+			"""
+			Prompts user with message. Will present default if present
+			and return it if the user enters nothing (presses enter).
+			
+			Note: message will have a colon (:) appended to end, so don't include one!
+			"""
+			if default:
+				item = raw_input('%s [%s]: ' % (message, default))
+				if not item:
+					item = default
+			else:
+				item = raw_input('%s: ' % message)
+			
+			return item
+				
 		# user (email address)
-		if update and 'user' in self._config:
-			user = raw_input('Enter sprint.ly username (email) [%s]: ' % self._config['user'])
-			if not user:
-				user = self._config['user']
-		else:
-			user = raw_input('Enter sprint.ly username (email): ')
-		self._config['user'] = user
+		self._config['user'] = getConfigItem('Enter sprint.ly username (email)')
 		
 		# key (sprintly api key)
-		if update and 'key' in self._config:
-			key  = raw_input('Enter sprint.ly API Key [%s]: ' % self._config['key'])
-			if not key:
-				key = self._config['key']
-		else:
-			key  = raw_input('Enter sprint.ly API Key: ')
-		self._config['key'] = key
-		
+		self._config['key'] = getConfigItem('Enter sprint.ly API Key')
+
 		# try and use API with these values to determine validity
 		response = self.sprintlyAPICall('user/whoami.json')
 		if not response:
 			raise SprintlyException('Invalid credentials. Unable to authenticate with sprint.ly.')
-		if response['email'] != user:
+		if response['email'] != self._config['user']:
 			raise SprintlyException('Invalid credentials. Please ensure you are using your own API Key.')
 		
 		# add user id to config
