@@ -13,6 +13,8 @@ from stat import S_IXUSR
 
 # constants
 CONFIG_VERSION = "2"
+SPRINTLY_PATH = '/usr/local/bin/sprintly'
+HOOK_PATH = '/usr/local/share/sprintly/commit-msg'
 SPRINTLY_SOURCE_URL   = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly"
 COMMIT_MSG_SOURCE_URL = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg"
 
@@ -72,7 +74,7 @@ class SprintlyTool:
 	
 	def install(self):
 		"""
-		Install this tool at /usr/bin/sprintly. If another file already
+		Install this tool at SPRINTLY_PATH. If another file already
 		exists with the same name, user will be prompted to replace the file.
 		"""
 		
@@ -92,7 +94,7 @@ class SprintlyTool:
 			raise SprintlyException('Unable to obtain commit-msg from ' + SPRINTLY_SOURCE_URL)
 		
 		# verify nothing exists at the target path
-		target = '/usr/bin/sprintly'
+		target = SPRINTLY_PATH
 		if os.path.isfile(target):
 			overwrite = raw_input('A file already exists at ' + target + '. Overwrite file? ')
 			while overwrite != 'y' and overwrite != 'n':

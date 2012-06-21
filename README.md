@@ -45,9 +45,9 @@ To update `sprintly`, type `sudo sprintly --update`. When updating, you will see
 
 	$ sudo sprintly --update
 	Downloading latest version of sprintly tool from GitHub...
-	A file already exists at /usr/bin/sprintly. Overwrite file? 
+	A file already exists at /usr/local/bin/sprintly. Overwrite file? 
 	
-Entering `y` will overwrite the old installation with the latest version. *Note: if you have another tool installed at `/usr/bin/sprintly`, enter `n` and manually install it under a different name.*
+Entering `y` will overwrite the old installation with the latest version. *Note: if you have another tool installed at `/usr/local/bin/sprintly`, enter `n` and manually install it under a different name.*
 
 #Installing the `commit-msg` hook.
 
