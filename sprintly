@@ -192,14 +192,21 @@ class SprintlyTool:
 			('key', 'Enter sprint.ly API Key'),
 		]
 		
-		# prompt user for each config item
-		for configItem in configItems:
-			name = configItem[0]
-			message = configItem[1]
-			if update and name in self._config:
-				self._config[name] = getConfigItem(message, self._config[name])
-			else:
-				self._config[name] = getConfigItem(message)
+		# prompt for user
+		name = 'user'
+		message = 'Enter sprint.ly username (email)'
+		if update and name in self._config:
+			self._config[name] = getConfigItem(message, self._config[name])
+		else:
+			self._config[name] = getConfigItem(message)
+			
+		# prompt for key
+		name = 'key'
+		message = 'Enter sprint.ly API Key'
+		if update and name in self._config:
+			self._config[name] = getConfigItem(message, self._config[name])
+		else:
+			self._config[name] = getConfigItem(message)
 
 		# try and use API with these values to determine validity
 		response = self.sprintlyAPICall('user/whoami.json')
