@@ -12,7 +12,7 @@ from optparse import OptionParser
 from stat import S_IXUSR
 
 # constants
-CONFIG_VERSION = "1"
+CONFIG_VERSION = "2"
 SPRINTLY_SOURCE_URL   = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly"
 COMMIT_MSG_SOURCE_URL = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg"
 
@@ -227,26 +227,24 @@ class SprintlyTool:
 			raise SprintlyException('Unable to get product list.')
 		productMap = {}
 		for product in products:
-			name = product['name']
 			id = str(product['id'])
-			productMap[id] = name
+			productMap[id] = product
 		productCount = len(productMap)
 		if productCount == 0:
 			raise SprintlyException('It appears that you have no products associated with your Sprint.ly account. Please add at least one and then try again.')
 		elif productCount == 1:
-			self._config['product'] = productMap.keys()[0]
+			self._config['product'] = productMap.values()[0]
 		else:
 			# prompt user for a product until they enter one found in the map
-			productList = ', '.join(['%s - %s' % (k,v) for k,v in productMap.items()])
-			defaultProduct = "0"
-			while defaultProduct not in productMap.keys():
-				name = 'product'
+			productList = ', '.join(['%d - %s' % (p['id'],p['name']) for p in productMap.values()])
+			defaultProductId = "0"
+			while defaultProductId not in productMap.keys():
 				message = 'Enter default sprint.ly product id (%s)' % productList
-				if update and name in self._config:
-					defaultProduct = getConfigItem(message, self._config[name])
+				if update and 'product' in self._config:
+					defaultProductId = getConfigItem(message, self._config['product']['id'])
 				else:
-					defaultProduct = getConfigItem(message)
-			self._config['product'] = defaultProduct
+					defaultProductId = getConfigItem(message)
+			self._config['product'] = productMap[defaultProductId]
 	
 		# write config file if all is good
 		serialized_config = json.dumps(self._config)
@@ -278,7 +276,7 @@ class SprintlyTool:
 				
 		# validate version
 		if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
-			print 'Your configuration file is out date. Please update it below.'
+			print 'Your configuration needs to be updated. You will now be prompted to update it.'
 			self.updateConfig()
 
 	def updateConfig(self):
@@ -308,6 +306,8 @@ class SprintlyTool:
 			
 			cache['updated_at'] = time()
 			cache['products'] = []
+			
+			products = []
 			
 			# use product from config file
 			products.append(self._config['product'])
@@ -382,7 +382,8 @@ class SprintlyTool:
 			cache_file = open(self._sprintlyCachePath, 'w')
 			cache_file.write(serialized_cache)
 			cache_file.close()
-		except Exception:
+		except Exception as e:
+			print e
 			print '\033[91m'	
 			print 'Unable to populate cache. List may not be up to date.'
 			print '\033[0m'
