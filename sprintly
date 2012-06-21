@@ -26,7 +26,7 @@ class SprintlyTool:
 		Initialize instance variables.
 		"""
 		
-		self._config = None
+		self._config = {}
 		self._sprintlyDirectoryPath = None
 		self._sprintlyConfigPath = None
 		self._sprintlyCachePath = None
@@ -160,17 +160,23 @@ class SprintlyTool:
 
 		self.loadFromConfig()
 
-	def createSprintlyConfig(self, path):
+	def createSprintlyConfig(self, path, update = False):
 		"""
-		Create the sprint.ly config. User will be prompted
-		for email and api key.
+		Create the sprint.ly config. Prompt user for all necessary values.
+		
+		When 'update' is set to True and an existing value is present for
+		a given configuration item, allow user to keep old value.
 		"""
 				
-		print 'Config not found. Creating config...'
+		print 'Creating config...'
+		
+		# user (email address)
 		user = raw_input('Enter sprint.ly account (email): ')
+		self._config['user'] = user
+		
+		# key (sprintly api key)
 		key  = raw_input('Enter sprint.ly API Key: ')
-		self._config = {'user':user, 'key':key}
-	
+		self._config['key'] = key
 		
 		# try and use API with these values to determine validity
 		response = self.sprintlyAPICall('user/whoami.json')
