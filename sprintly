@@ -12,13 +12,13 @@ from optparse import OptionParser
 from stat import S_IXUSR
 
 # constants
-CONFIG_VERSION        = "2"
+CONFIG_VERSION        = '2'
 SPRINTLY_NAME         = 'sprintly'
 SPRINTLY_DIR          = '/usr/local/bin/'
 HOOK_NAME             = 'commit-msg'
 HOOK_DIR              = '/usr/local/share/sprintly/'
-SPRINTLY_SOURCE_URL   = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly"
-COMMIT_MSG_SOURCE_URL = "https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg"
+SPRINTLY_SOURCE_URL   = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly'
+COMMIT_MSG_SOURCE_URL = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg'
 
 # non-editable constants
 SPRINTLY_PATH         = SPRINTLY_DIR + SPRINTLY_NAME
@@ -64,7 +64,7 @@ class SprintlyTool:
 			# ensure that the ~/.sprintly/ folder exists, we have credentials, etc
 			self.initialize()
 			
-			# run the requested option (note: install is handled above)
+			# run the requested option (note: install/update are handled above)
 			if options.installHook:
 				self.installHook()
 			elif options.updateConfig:
@@ -87,7 +87,7 @@ class SprintlyTool:
 			print 'Must be run as root. Try re-running with sudo.'
 			return
 		
-		print "Downloading latest version of sprintly from GitHub..."
+		print 'Downloading latest version of sprintly from GitHub...'
 		
 		# get the file
 		try:
@@ -248,7 +248,7 @@ class SprintlyTool:
 		else:
 			# prompt user for a product until they enter one found in the map
 			productList = ', '.join(['%d - %s' % (p['id'],p['name']) for p in productMap.values()])
-			defaultProductId = "0"
+			defaultProductId = '0'
 			while defaultProductId not in productMap.keys():
 				message = 'Enter default sprint.ly product id (%s)' % productList
 				if update and 'product' in self._config:
@@ -436,7 +436,7 @@ class SprintlyTool:
 		url = 'https://sprint.ly/api/' + url
 		
 		try:
-			userData = "Basic " + (self._config['user'] + ":" + self._config['key']).encode("base64").rstrip()
+			userData = 'Basic ' + (self._config['user'] + ':' + self._config['key']).encode('base64').rstrip()
 			req = urllib2.Request(url)
 			req.add_header('Accept', 'application/json')
 			req.add_header('Authorization', userData)
