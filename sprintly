@@ -222,7 +222,6 @@ class SprintlyTool:
 		self._config['id'] = response['id']
 		
 		# get a list of products and prompt user for default product if more than 1
-		print 'Retrieving list of Sprint.ly products...'
 		products = self.sprintlyAPICall('products.json')
 		if not products:
 			raise SprintlyException('Unable to get product list.')
@@ -279,7 +278,8 @@ class SprintlyTool:
 				
 		# validate version
 		if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
-			raise SprintlyException('Please run \'sprintly --update-config\' to upgrade your configuration file.')
+			print 'Your configuration file is out date. Please update it below.'
+			self.updateConfig()
 
 	def updateConfig(self):
 		"""
