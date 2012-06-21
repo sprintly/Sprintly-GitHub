@@ -112,7 +112,6 @@ class SprintlyTool:
 			try:
 				os.unlink(target)
 			except Exception:
-				print e
 				raise SprintlyException('Unable to remove ' + target)
 				
 		# copy file to target
@@ -196,9 +195,7 @@ class SprintlyTool:
 		# used to simplify prompting user with optional default
 		def getConfigItem(message, default = None):
 			if default:
-				item = raw_input('%s [%s]: ' % (message, default))
-				if not item:
-					item = default
+				item = raw_input('%s [%s]: ' % (message, default)) or default
 			else:
 				item = raw_input('%s: ' % message)
 			return item
@@ -390,8 +387,7 @@ class SprintlyTool:
 			cache_file = open(self._sprintlyCachePath, 'w')
 			cache_file.write(serialized_cache)
 			cache_file.close()
-		except Exception as e:
-			print e
+		except Exception:
 			print '\033[91m'	
 			print 'Unable to populate cache. List may not be up to date.'
 			print '\033[0m'
