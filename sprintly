@@ -489,8 +489,7 @@ class SprintlyTool:
         # if not, sprint.ly won't be able to create comments
         try:
             process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
-            (stdout, _) = process.communicate()
-            gitEmail = stdout.strip()
+            gitEmail = process.stdout.read().strip()
             if gitEmail != self._config['user']:
                 print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
                 print 'WARNING: Don\'t worry - there is an easy fix. Simply run one of the following:'
