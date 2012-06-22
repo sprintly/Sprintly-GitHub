@@ -73,7 +73,7 @@ class SprintlyTool:
                 self.listSprintlyItems()
 
         except Exception as e:
-            die('Fatal Error: ' + str(e))
+            die('Fatal Error: %s' % str(e))
 
     def install(self, update):
         """
@@ -94,12 +94,12 @@ class SprintlyTool:
             response = urllib2.urlopen(SPRINTLY_SOURCE_URL)
             sprintly_file_contents = response.read()
         except Exception:
-            raise SprintlyException('Unable to obtain commit-msg from ' + SPRINTLY_SOURCE_URL)
+            raise SprintlyException('Unable to obtain commit-msg from %s' % SPRINTLY_SOURCE_URL)
 
         # verify nothing exists at the target path
         target = SPRINTLY_PATH
         if os.path.isfile(target):
-            overwrite = raw_input('A file already exists at ' + target + '. Overwrite file? ')
+            overwrite = raw_input('A file already exists at %s. Overwrite file? ' % target)
             while overwrite != 'y' and overwrite != 'n':
                 overwrite = raw_input('Please enter y/n: ')
 
@@ -108,11 +108,11 @@ class SprintlyTool:
                 return
 
             # remove existing file
-            print 'Deleting ' + target + '...'
+            print 'Deleting %s...' % target
             try:
                 os.unlink(target)
             except Exception:
-                raise SprintlyException('Unable to remove ' + target)
+                raise SprintlyException('Unable to remove %s' % target)
 
         # copy file to target
         try:
@@ -120,16 +120,16 @@ class SprintlyTool:
             target_file.write(sprintly_file_contents)
             target_file.close()
         except Exception:
-            raise SprintlyException('Unable to save file to ' + target)
+            raise SprintlyException('Unable to save file to %s' % target)
 
         # ensure it is executable
         try:
             subprocess.call(['chmod', '+x', target])
         except Exception:
-            raise SprintlyException('Unable to make ' + target + ' executable.')
+            raise SprintlyException('Unable to make %s executable.' % target)
 
         # done!
-        print 'Successfully installed sprintly to ' + target
+        print 'Successfully installed sprintly to %s' % target
 
         # except update the hook too
         self.updateHook()
@@ -154,26 +154,25 @@ class SprintlyTool:
             raise SprintlyException('Unable to expand home directory.')
 
         # set the sprintly directory path (create if it doesn't exist)
-        self._sprintlyDirectoryPath = home + '/.sprintly/'
+        self._sprintlyDirectoryPath = os.path.join(home, '.sprintly')
         if not os.path.isdir(self._sprintlyDirectoryPath):
             os.mkdir(self._sprintlyDirectoryPath, 0700)
             if not os.path.isdir(self._sprintlyDirectoryPath):
-                raise SprintlyException('Unable to create folder at ' + self._sprintlyDirectoryPath)
+                raise SprintlyException('Unable to create folder at %s' % self._sprintlyDirectoryPath)
 
         # set the sprintly config path (create if it doesn't exist)
-        self._sprintlyConfigPath = self._sprintlyDirectoryPath + '/sprintly.config'
+        self._sprintlyConfigPath = os.path.join(self._sprintlyDirectoryPath, 'sprintly.config')
         if not os.path.isfile(self._sprintlyConfigPath):
             self.createSprintlyConfig()
 
         # set the sprintly cache path (create if it doesn't exist)
-        self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
+        self._sprintlyCachePath = os.path.join(self._sprintlyDirectoryPath, 'sprintly.cache')
         if not os.path.isfile(self._sprintlyCachePath):
             try:
-                cache_file = open(self._sprintlyCachePath, 'w')
-                cache_file.write('')
-                cache_file.close()
+                # "touch" cache file
+                open(self._sprintlyCachePath, 'w').close()
             except Exception:
-                raise SprintlyException('Unable to create file at ' + self._sprintlyCachePath)
+                raise SprintlyException('Unable to create file at %s' % self._sprintlyCachePath)
 
         # load config values
         self.loadFromConfig()
@@ -237,10 +236,13 @@ class SprintlyTool:
         if not products:
             raise SprintlyException('Unable to get product list.')
         productMap = {}
+
         for product in products:
             productId = str(product['id'])
             productMap[productId] = product
+
         productCount = len(productMap)
+
         if productCount == 0:
             raise SprintlyException('It appears that you have no products associated with your Sprint.ly account. Please add at least one and then try again.')
         elif productCount == 1:
@@ -269,7 +271,7 @@ class SprintlyTool:
             else:
                 print 'Configuration successfully updated.'
         except:
-            raise SprintlyException('Unable to write configuration to disk at ' + self._sprintlyConfigPath)
+            raise SprintlyException('Unable to write configuration to disk at %s' % self._sprintlyConfigPath)
 
     def loadFromConfig(self):
         """
@@ -283,7 +285,7 @@ class SprintlyTool:
             config_file.close()
             self._config = json.loads(serialized_config)
         except:
-            raise SprintlyException('Unable to read credentials from disk at ' + self._sprintlyConfigPath)
+            raise SprintlyException('Unable to read credentials from disk at %s' % self._sprintlyConfigPath)
 
         # validate version
         if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
@@ -338,7 +340,7 @@ class SprintlyTool:
                 # get all items assigned to current user
                 items = self.sprintlyAPICall('products/' + productId + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
                 if not items:
-                    raise SprintlyException('Unable to get items for ' + productNameWithUrl)
+                    raise SprintlyException('Unable to get items for %s' % productNameWithUrl)
 
                 # check to see if this was an error message (product is archived, for example)
                 # only error messages (currently) have codes, so this is a definitive check
@@ -346,8 +348,8 @@ class SprintlyTool:
                     # include message if applicable
                     message = ''
                     if 'message' in items:
-                        message = ': ' + items['message']
-                    print 'Warning: unable to get items for ' + productNameWithUrl + message
+                        message = ': %s' % items['message']
+                    print 'Warning: unable to get items for %s%s' % (productNameWithUrl, message)
                     continue
 
                 # a 'parent' is any item without a parent key
@@ -432,7 +434,7 @@ class SprintlyTool:
         the JSON response or false if the call could not be completed.
         """
 
-        url = 'https://sprint.ly/api/' + url
+        url = 'https://sprint.ly/api/%s' % url
 
         try:
             userData = 'Basic ' + (self._config['user'] + ':' + self._config['key']).encode('base64').rstrip()
@@ -456,7 +458,7 @@ class SprintlyTool:
 
         # ensure the current directory is a git repository
         directory = os.getcwd()
-        hooks_directory = directory + '/.git/hooks/'
+        hooks_directory = os.path.join(directory, '.git', 'hooks')
         if not os.path.isdir(hooks_directory):
             raise SprintlyException('This command can only be run from the root of a git repository.')
 
@@ -465,7 +467,7 @@ class SprintlyTool:
             raise SprintlyException('Please run \'sprintly --update\' first to install the hook.')
 
         # create a symlink to the commit-msg file
-        destination = hooks_directory + 'commit-msg'
+        destination = os.path.join(hooks_directory, HOOK_NAME)
 
         # if the destination is a file, move it; if it's a symlink, delete it
         try:
@@ -474,7 +476,7 @@ class SprintlyTool:
             elif os.path.islink(destination):
                 os.unlink(destination)
         except Exception:
-            raise SprintlyException('File already exists at ' + destination + '. Please delete it before proceeding.')
+            raise SprintlyException('File already exists at %s. Please delete it before proceeding.' % destination)
 
         print 'Creating symlink...'
 
@@ -483,7 +485,7 @@ class SprintlyTool:
         except Exception:
             raise SprintlyException('Unable to create symlink.')
 
-        print 'Hook was installed at ' + destination
+        print 'Hook was installed at %s' % destination
 
         # check to see if the email associated with git matches the sprint.ly email
         # if not, sprint.ly won't be able to create comments
@@ -512,14 +514,14 @@ class SprintlyTool:
             response = urllib2.urlopen(COMMIT_MSG_SOURCE_URL)
             commit_msg_file_contents = response.read()
         except Exception:
-            raise SprintlyException('Unable to obtain commit-msg from ' + COMMIT_MSG_SOURCE_URL)
+            raise SprintlyException('Unable to obtain commit-msg from %s' % COMMIT_MSG_SOURCE_URL)
 
         # ensure directory exists
         try:
             if not os.path.exists(HOOK_DIR):
                 os.mkdir(HOOK_DIR, 0777)
         except Exception:
-            raise SprintlyException('Unable to create directory ' + HOOK_DIR)
+            raise SprintlyException('Unable to create directory %s' % HOOK_DIR)
 
         # save the file
         try:
@@ -527,15 +529,15 @@ class SprintlyTool:
             commit_msg_file.write(commit_msg_file_contents)
             commit_msg_file.close()
         except Exception:
-            raise SprintlyException('Unable to save file to ' + HOOK_PATH)
+            raise SprintlyException('Unable to save file to %s' % HOOK_PATH)
 
         # make sure user can read, write, and execute
         try:
             os.chmod(HOOK_PATH, 0777)
         except Exception:
-            raise SprintlyException('Unable to make ' + HOOK_PATH + ' executable.')
+            raise SprintlyException('Unable to make %s executable.' % HOOK_PATH)
 
-        print 'Hook was updated at ' + HOOK_PATH
+        print 'Hook was updated at %s' % HOOK_PATH
 
 
 class SprintlyException(Exception):

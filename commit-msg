@@ -65,18 +65,17 @@ def validate_message(message):
     valid_keywords = ['close', 'closes', 'closed', 'fix', 'fixed', 'fixes', 'addresses', 're', 'ref', 'refs', 'references', 'see', 'breaks', 'unfixes', 'reopen', 'reopens', 're-open', 're-opens']
     try:
         # match pound-number-(space or period)
-        result = re.match('^(#[0-9]+[\.\s$]).*$', message)
-        if result is not None:
-            return (True, 'References ' + message)
+        result = re.match(r'^(#[0-9]+[\.\s$]).*$', message)
+        if result:
+            return (True, 'References %s' % message)
 
         # match any keyword followed by a pound-number-(space or period)
         pattern = r'.*\b(' + '|'.join(valid_keywords) + r')\b\s(#[0-9]+([\.\s]|$)).*'
         result = re.match(pattern, messageLower)
-        if result is not None:
+        if result:
             return (True, message)
 
     except Exception as e:
-        print e
         pass
     return False
 
@@ -132,13 +131,8 @@ if __name__ == '__main__':
             # Should never happen, but just in case...
             raise Exception('Commit message was not received.')
     except KeyboardInterrupt:
-        print ''
-        print ''
-        print 'Program interrupted. Commit aborted.'
+        print '\n\nProgram interrupted. Commit aborted.'
         sys.exit(1)
     except Exception as e:
-        print e
-        print ''
-        print ''
-        print 'Error occurred. Commit aborted.'
+        print '\n\nError occurred. Commit aborted.'
         sys.exit(1)
