@@ -9,7 +9,6 @@ import subprocess
 
 from time import time
 from optparse import OptionParser
-from stat import S_IXUSR
 
 # constants
 CONFIG_VERSION = '2'
