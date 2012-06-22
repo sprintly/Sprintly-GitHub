@@ -54,7 +54,7 @@ class SprintlyTool:
             parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
             parser.add_option('--update-config', dest='updateConfig', help='edit configuration', action='store_true', default=False)
 
-            (options, args) = parser.parse_args()
+            (options, _) = parser.parse_args()
 
             # if the user wants to install, do it before we initialize (they will re-run once installed)
             if options.install or options.update:
@@ -238,8 +238,8 @@ class SprintlyTool:
             raise SprintlyException('Unable to get product list.')
         productMap = {}
         for product in products:
-            id = str(product['id'])
-            productMap[id] = product
+            productId = str(product['id'])
+            productMap[productId] = product
         productCount = len(productMap)
         if productCount == 0:
             raise SprintlyException('It appears that you have no products associated with your Sprint.ly account. Please add at least one and then try again.')
@@ -331,14 +331,14 @@ class SprintlyTool:
             # iterate over products
             for product in products:
 
-                product_name = product['name']
-                product_id = str(product['id'])
-                product_name_with_url = '\'' + product_name + '\' (https://sprint.ly/product/' + product_id + '/)'
+                productName = product['name']
+                productId = str(product['id'])
+                productNameWithUrl = '\'' + productName + '\' (https://sprint.ly/product/' + productId + '/)'
 
                 # get all items assigned to current user
-                items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
+                items = self.sprintlyAPICall('products/' + productId + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
                 if not items:
-                    raise SprintlyException('Unable to get items for ' + product_name_with_url)
+                    raise SprintlyException('Unable to get items for ' + productNameWithUrl)
 
                 # check to see if this was an error message (product is archived, for example)
                 # only error messages (currently) have codes, so this is a definitive check
@@ -347,7 +347,7 @@ class SprintlyTool:
                     message = ''
                     if 'message' in items:
                         message = ': ' + items['message']
-                    print 'Warning: unable to get items for ' + product_name_with_url + message
+                    print 'Warning: unable to get items for ' + productNameWithUrl + message
                     continue
 
                 # a 'parent' is any item without a parent key
@@ -411,13 +411,12 @@ class SprintlyTool:
             cache = json.loads(serialized_cache)
         except Exception:
             raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
-        updated_at = cache['updated_at']
         products = cache['products']
 
         for product in products:
             name = product['name']
-            id = str(product['id'])
-            print 'Product: ' + name + ' (https://sprint.ly/product/' + id + '/)'
+            productId = str(product['id'])
+            print 'Product: ' + name + ' (https://sprint.ly/product/' + productId + '/)'
 
             items = product['items']
             for item in items:
@@ -490,7 +489,7 @@ class SprintlyTool:
         # if not, sprint.ly won't be able to create comments
         try:
             process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
-            stdout, stderr = process.communicate()
+            (stdout, _) = process.communicate()
             gitEmail = stdout.strip()
             if gitEmail != self._config['user']:
                 print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
