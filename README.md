@@ -53,10 +53,18 @@ Entering `y` will overwrite the old installation with the latest version. *Note:
 The `sprintly` tool can install the hook for you. Navigate to a git repository and run:
 
 	$ sprintly --install-hook
-	Downloading latest version of commit-msg hook from GitHub...
-	Hook was updated at <home directory>/.sprintly/commit-msg
 	Creating symlink...
 	Hook was installed at <repository>/.git/hooks/commit-msg
+	
+Just make sure that your git user.email matches your Sprint.ly username, or the hook won't work. If this happens, you will see the following message:
+
+	$ sprintly --install-hook
+	Creating symlink...
+	Hook was installed at <repository>/.git/hooks/commit-msg
+	WARNING: Your git email (user@site.org) does not match your sprint.ly username (user@company.com)
+	WARNING: Don't worry - there is an easy fix. Simply run one of the following:
+		'git config --global user.email user@company.com' (all repos)
+		'git config user.email user@company.com' (this repo only)
 	
 *Note: the hook installed is actually a symbolic link to a shared copy of the hook found at /usr/local/share/sprintly/commit-msg. By doing this, the hook can be easily updated for all users and all repositories by calling `sprintly --update`.*
 	

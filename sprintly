@@ -494,7 +494,9 @@ class SprintlyTool:
 			gitEmail = stdout.strip()
 			if gitEmail != self._config['user']:
 				print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
-				print 'WARNING: If your git email does not match your sprint.ly username, sprint.ly won\'t be able to process this commit.'
+				print 'WARNING: Don\'t worry - there is an easy fix. Simply run one of the following:'
+				print '\t\'git config --global user.email ' + self._config['user'] + '\' (all repos)'
+				print '\t\'git config user.email ' + self._config['user'] + '\' (this repo only)'
 		except Exception:
 			print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
 		
