@@ -12,553 +12,557 @@ from optparse import OptionParser
 from stat import S_IXUSR
 
 # constants
-CONFIG_VERSION        = '2'
-SPRINTLY_NAME         = 'sprintly'
-SPRINTLY_DIR          = '/usr/local/bin/'
-HOOK_NAME             = 'commit-msg'
-HOOK_DIR              = '/usr/local/share/sprintly/'
-SPRINTLY_SOURCE_URL   = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly'
+CONFIG_VERSION = '2'
+SPRINTLY_NAME = 'sprintly'
+SPRINTLY_DIR = '/usr/local/bin/'
+HOOK_NAME = 'commit-msg'
+HOOK_DIR = '/usr/local/share/sprintly/'
+SPRINTLY_SOURCE_URL = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly'
 COMMIT_MSG_SOURCE_URL = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg'
 
 # non-editable constants
-SPRINTLY_PATH         = SPRINTLY_DIR + SPRINTLY_NAME
-HOOK_PATH             = HOOK_DIR + HOOK_NAME
+SPRINTLY_PATH = SPRINTLY_DIR + SPRINTLY_NAME
+HOOK_PATH = HOOK_DIR + HOOK_NAME
+
 
 class SprintlyTool:
-	"""
-	A command line tool for displaying your stories, tasks, tests, and defects
-	from sprint.ly.
-	"""
-	
-	def __init__(self):
-		"""
-		Initialize instance variables.
-		"""
-		
-		self._config = {}
-		self._sprintlyDirectoryPath = None
-		self._sprintlyConfigPath = None
-		self._sprintlyCachePath = None
+    """
+    A command line tool for displaying your stories, tasks, tests, and defects
+    from sprint.ly.
+    """
 
-	def run(self):
-		"""
-		Application flow.
-		"""
-	
-		try:
-		
-			usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.'
-			parser = OptionParser(usage=usage)
-			parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
-			parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
-			parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
-			parser.add_option('--update-config', dest='updateConfig', help='edit configuration', action='store_true', default=False)
-			
-			(options, args) = parser.parse_args()
-		
-			# if the user wants to install, do it before we initialize (they will re-run once installed)
-			if options.install or options.update:
-				self.install(options.update)
-				return;
-				
-			# ensure that the ~/.sprintly/ folder exists, we have credentials, etc
-			self.initialize()
-			
-			# run the requested option (note: install/update are handled above)
-			if options.installHook:
-				self.installHook()
-			elif options.updateConfig:
-				self.updateConfig()
-			else:
-				self.listSprintlyItems()
-	
-		except Exception as e:
-			die('Fatal Error: ' + str(e))
-	
-	def install(self, update):
-		"""
-		Install this tool at SPRINTLY_PATH. If another file already
-		exists with the same name, user will be prompted to replace the file.
-		"""
-		
-		# must be run as root
-		euid = os.geteuid() 
-		if euid != 0:
-			print 'Must be run as root. Try re-running with sudo.'
-			return
-		
-		print 'Downloading latest version of sprintly from GitHub...'
-		
-		# get the file
-		try:
-			response = urllib2.urlopen(SPRINTLY_SOURCE_URL)
-			sprintly_file_contents = response.read()
-		except Exception:
-			raise SprintlyException('Unable to obtain commit-msg from ' + SPRINTLY_SOURCE_URL)
-		
-		# verify nothing exists at the target path
-		target = SPRINTLY_PATH
-		if os.path.isfile(target):
-			overwrite = raw_input('A file already exists at ' + target + '. Overwrite file? ')
-			while overwrite != 'y' and overwrite != 'n':
-				overwrite = raw_input('Please enter y/n: ')
-				
-			if overwrite == 'n':
-				print 'Unable to install. Please install manually.'
-				return
-	
-			# remove existing file
-			print 'Deleting ' + target + '...'
-			try:
-				os.unlink(target)
-			except Exception:
-				raise SprintlyException('Unable to remove ' + target)
-				
-		# copy file to target
-		try:
-			target_file = open(target, 'w')
-			target_file.write(sprintly_file_contents)
-			target_file.close()
-		except Exception:
-			raise SprintlyException('Unable to save file to ' + target)
-			
-		# ensure it is executable
-		try:
-			subprocess.call(['chmod', '+x', target])
-		except Exception:
-			raise SprintlyException('Unable to make ' + target + ' executable.')
-			
-		# done!
-		print 'Successfully installed sprintly to ' + target
-		
-		# except update the hook too
-		self.updateHook()
+    def __init__(self):
+        """
+        Initialize instance variables.
+        """
 
-		# if this is not an update, install
-		if not update:
-			print ''
-			print 'That\'s all! Type \'sprintly\' to get started.'
-			print ''
-				
-	def initialize(self):
-		"""
-		Ultimate goal is to get the user and key from the config file.
-		If the config file cannot be found, a config file will be
-		created via prompts displayed to the user. A cache file will
-		also be created during this step.
-		"""
-					
-		# get the users home directory
-		home = os.path.expanduser('~')
-		if home == '~':
-			raise SprintlyException('Unable to expand home directory.')
-	
-		# set the sprintly directory path (create if it doesn't exist)
-		self._sprintlyDirectoryPath = home + '/.sprintly/'
-		if not os.path.isdir(self._sprintlyDirectoryPath):
-			os.mkdir(self._sprintlyDirectoryPath, 0700)
-			if not os.path.isdir(self._sprintlyDirectoryPath):
-				raise SprintlyException('Unable to create folder at ' + self._sprintlyDirectoryPath)
-		
-		# set the sprintly config path (create if it doesn't exist)
-		self._sprintlyConfigPath = self._sprintlyDirectoryPath + '/sprintly.config'
-		if not os.path.isfile(self._sprintlyConfigPath):
-			self.createSprintlyConfig()
-		
-		# set the sprintly cache path (create if it doesn't exist)
-		self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
-		if not os.path.isfile(self._sprintlyCachePath):
-			try:
-				cache_file = open(self._sprintlyCachePath, 'w')
-				cache_file.write('')
-				cache_file.close()
-			except Exception:
-				raise SprintlyException('Unable to create file at ' + self._sprintlyCachePath)
+        self._config = {}
+        self._sprintlyDirectoryPath = None
+        self._sprintlyConfigPath = None
+        self._sprintlyCachePath = None
 
-		# load config values
-		self.loadFromConfig()
+    def run(self):
+        """
+        Application flow.
+        """
 
-	def createSprintlyConfig(self, update = False):
-		"""
-		Create the sprint.ly config. Prompt user for all necessary values.
-		
-		When 'update' is set to True and an existing value is present for
-		a given configuration item, allow user to keep old value.
-		
-		Note: if update is True, this must be called after initialize. Failure
-		to do so wil result in a new config being created, as the values in
-		self._config will not yet be set.
-		"""
-		
-		if not update:
-			print 'Creating config...'
-		else:
-			print 'Updating config... Press enter to accept default value shown in brackets.'
-		
-		# set version
-		self._config['version'] = CONFIG_VERSION
-		
-		# used to simplify prompting user with optional default
-		def getConfigItem(message, default = None):
-			if default:
-				item = raw_input('%s [%s]: ' % (message, default)) or default
-			else:
-				item = raw_input('%s: ' % message)
-			return item
+        try:
 
-		# prompt for user
-		name = 'user'
-		message = 'Enter sprint.ly username (email)'
-		if update and name in self._config:
-			self._config[name] = getConfigItem(message, self._config[name])
-		else:
-			self._config[name] = getConfigItem(message)
-			
-		# prompt for key
-		name = 'key'
-		message = 'Enter sprint.ly API Key'
-		if update and name in self._config:
-			self._config[name] = getConfigItem(message, self._config[name])
-		else:
-			self._config[name] = getConfigItem(message)
+            usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.'
+            parser = OptionParser(usage=usage)
+            parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
+            parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
+            parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
+            parser.add_option('--update-config', dest='updateConfig', help='edit configuration', action='store_true', default=False)
 
-		# try and use API with these values to determine validity
-		response = self.sprintlyAPICall('user/whoami.json')
-		if not response or 'code' in response:
-			raise SprintlyException('Invalid credentials. Unable to authenticate with sprint.ly.')
-		if response['email'] != self._config['user']:
-			raise SprintlyException('Invalid credentials. Please ensure you are using your own API Key.')
-		
-		# add user id to config
-		self._config['id'] = response['id']
-		
-		# get a list of products and prompt user for default product if more than 1
-		products = self.sprintlyAPICall('products.json')
-		if not products:
-			raise SprintlyException('Unable to get product list.')
-		productMap = {}
-		for product in products:
-			id = str(product['id'])
-			productMap[id] = product
-		productCount = len(productMap)
-		if productCount == 0:
-			raise SprintlyException('It appears that you have no products associated with your Sprint.ly account. Please add at least one and then try again.')
-		elif productCount == 1:
-			self._config['product'] = productMap.values()[0]
-		else:
-			# prompt user for a product until they enter one found in the map
-			productList = ', '.join(['%d - %s' % (p['id'],p['name']) for p in productMap.values()])
-			defaultProductId = '0'
-			while defaultProductId not in productMap.keys():
-				message = 'Enter default sprint.ly product id (%s)' % productList
-				if update and 'product' in self._config:
-					defaultProductId = getConfigItem(message, str(self._config['product']['id']))
-				else:
-					defaultProductId = getConfigItem(message)
-			self._config['product'] = productMap[defaultProductId]
-	
-		# write config file if all is good
-		serialized_config = json.dumps(self._config)
-		
-		try:
-			config_file = open(self._sprintlyConfigPath, 'w')
-			config_file.write(serialized_config)
-			config_file.close()
-			if not update:
-				print 'Configuration successfully created.'
-			else:
-				print 'Configuration successfully updated.'
-		except:
-			raise SprintlyException('Unable to write configuration to disk at ' + self._sprintlyConfigPath)
-		
-	def loadFromConfig(self):
-		"""
-		Load user and key from the config file. Validate here that the version
-		of this config is readable by this version of the tool.
-		"""
-				
-		try:
-			config_file = open(self._sprintlyConfigPath, 'r')
-			serialized_config = config_file.readline()
-			config_file.close()
-			self._config = json.loads(serialized_config)
-		except:
-			raise SprintlyException('Unable to read credentials from disk at ' + self._sprintlyConfigPath)			
-				
-		# validate version
-		if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
-			print 'Your configuration needs to be updated. You will now be prompted to update it.'
-			self.updateConfig()
+            (options, args) = parser.parse_args()
 
-	def updateConfig(self):
-		"""
-		Prompt user to update configuration settings.
-		Defaults will be original config values if present.
-		"""
-		self.createSprintlyConfig(True)
-	
-	def listSprintlyItems(self):
-		"""
-		Lists all items for the current user from the sprint.ly api.
-		"""
+            # if the user wants to install, do it before we initialize (they will re-run once installed)
+            if options.install or options.update:
+                self.install(options.update)
+                return
 
-		# populate the cache from the API if possible (may not be possible,
-		# e.g. in the case of offline access)
-		self.populateCache()
-		self.readCache()
-			
-	def populateCache(self):
-		"""
-		Populate the cache from the sprint.ly API if possible.
-		"""
-		
-		try:
-			cache = {}
-			
-			cache['updated_at'] = time()
-			cache['products'] = []
-			
-			products = []
-			
-			# use product from config file
-			products.append(self._config['product'])
-			
-			# get products from the API
-			# products = self.sprintlyAPICall('products.json')	
-			# if not products:
-			# 	raise SprintlyException('Unable to get product list.')
+            # ensure that the ~/.sprintly/ folder exists, we have credentials, etc
+            self.initialize()
 
-			# iterate over products
-			for product in products:
-			
-				product_name = product['name']
-				product_id = str(product['id'])
-				product_name_with_url = '\'' + product_name + '\' (https://sprint.ly/product/' + product_id + '/)'
-				
-				# get all items assigned to current user
-				items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
-				if not items:
-					raise SprintlyException('Unable to get items for ' + product_name_with_url)
+            # run the requested option (note: install/update are handled above)
+            if options.installHook:
+                self.installHook()
+            elif options.updateConfig:
+                self.updateConfig()
+            else:
+                self.listSprintlyItems()
 
-				# check to see if this was an error message (product is archived, for example)
-				# only error messages (currently) have codes, so this is a definitive check
-				if 'code' in items:
-					# include message if applicable
-					message = ''
-					if 'message' in items:
-						message = ': ' + items['message']
-					print 'Warning: unable to get items for ' + product_name_with_url + message
-					continue
-				
-				# a 'parent' is any item without a parent key
-				# a 'child' is any item with a parent key
-				# sort so that all parents appear first and all children appear after ordered by their number
-				items.sort(key=lambda item:item['number'] if 'parent' in item else sys.maxint, reverse=True)
-				
-				# turn flat list into tree
-				itemsTree = []
-				itemsMap = {}
-				
-				for item in items:
-					number = str(item['number'])
-				
-					# if item is not a child
-					if 'parent' not in item:
-						itemsTree.append(item)
-						itemsMap[number] = item
-					
-					# if item is a child...
-					else:
-						parentNumber = str(item['parent'])
-						
-						# if we have the parent, nest under parent
-						if parentNumber in itemsMap:
-						
-							# we sorted items above to ensure all parents will be in map before any child is encountered
-							parent = itemsMap[parentNumber]
-							if 'children' not in parent:
-								parent['children'] = []
-							parent['children'].append(item)
-						# if we don't have the parent, display as top level
-						else:
-							itemsTree.append(item)
-				
-				# sort items by (first child, if it exists, else number)
-				itemsTree.sort(key=lambda item:item['children'][0]['number'] if 'children' in item else item['number'], reverse=True)
-				product['items'] = itemsTree
-				cache['products'].append(product)
-		
-			serialized_cache = json.dumps(cache)
-		
-			cache_file = open(self._sprintlyCachePath, 'w')
-			cache_file.write(serialized_cache)
-			cache_file.close()
-		except Exception:
-			print '\033[91m'	
-			print 'Unable to populate cache. List may not be up to date.'
-			print '\033[0m'
-		
-	def readCache(self):
-		"""
-		Read from the cache and return a list of sprint.ly items.
-		"""
-		
-		cache_file = open(self._sprintlyCachePath, 'r')
-		serialized_cache = cache_file.readline()
-		cache_file.close()
-		
-		try:
-			cache = json.loads(serialized_cache)
-		except Exception:
-			raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
-		updated_at = cache['updated_at']
-		products = cache['products']
-					
-		for product in products:
-			name = product['name']
-			id = str(product['id'])
-			print 'Product: ' + name + ' (https://sprint.ly/product/' + id + '/)'
-			
-			items = product['items']
-			for item in items:
-				print '\t#' +str(item['number']) + ': ' + item['title'][:80] + ' '
-				
-				if 'children' in item:
-					for child in item['children']:
-						print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]		
-	
-	def sprintlyAPICall(self, url):
-		"""
-		Wraps up a call to the sprint.ly api. Returns a map representing
-		the JSON response or false if the call could not be completed.
-		"""
-					
-		url = 'https://sprint.ly/api/' + url
-		
-		try:
-			userData = 'Basic ' + (self._config['user'] + ':' + self._config['key']).encode('base64').rstrip()
-			req = urllib2.Request(url)
-			req.add_header('Accept', 'application/json')
-			req.add_header('Authorization', userData)
-			res = urllib2.urlopen(req)
-			response = res.read()
-			return json.loads(response)
-		except urllib2.HTTPError, error:
-			response = error.read()
-			return json.loads(response)
-		except Exception:
-			return False
-		
-	def installHook(self):
-		"""
-		A symlink will be created between the <current directory>/.git/hooks/commit-msg
-		and ~/.sprintly/commit-msg
-		"""
-		
-		# ensure the current directory is a git repository
-		directory = os.getcwd()
-		hooks_directory = directory + '/.git/hooks/'
-		if not os.path.isdir(hooks_directory):
-			raise SprintlyException('This command can only be run from the root of a git repository.')
-		
-		# ensure hook is installed
-		if not os.path.isfile(HOOK_PATH):
-			raise SprintlyException('Please run \'sprintly --update\' first to install the hook.')
-		
-		# create a symlink to the commit-msg file
-		destination = hooks_directory + 'commit-msg'
-		
-		# if the destination is a file, move it; if it's a symlink, delete it
-		try:
-			if os.path.isfile(destination) and not os.path.islink(destination):
-				shutil.move(destination, destination + '.original')
-			elif os.path.islink(destination):
-				os.unlink(destination)
-		except Exception:
-			raise SprintlyException('File already exists at ' + destination + '. Please delete it before proceeding.')
-		
-		print 'Creating symlink...'
-		
-		try:
-			os.symlink(HOOK_PATH, destination)
-		except Exception:
-			raise SprintlyException('Unable to create symlink.')
-		
-		print 'Hook was installed at ' + destination
-		
-		# check to see if the email associated with git matches the sprint.ly email
-		# if not, sprint.ly won't be able to create comments
-		try:
-			process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
-			stdout, stderr = process.communicate()
-			gitEmail = stdout.strip()
-			if gitEmail != self._config['user']:
-				print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
-				print 'WARNING: Don\'t worry - there is an easy fix. Simply run one of the following:'
-				print '\t\'git config --global user.email ' + self._config['user'] + '\' (all repos)'
-				print '\t\'git config user.email ' + self._config['user'] + '\' (this repo only)'
-		except Exception:
-			print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
-		
-	def updateHook(self):
-		"""
-		Download the commit-msg hook to ~/.sprintly/commit-msg.
-		Replace existing file if present. Make executable.
-		Returns the path of the file.
-		"""
-		
-		print 'Downloading latest version of commit-msg hook from GitHub...'
-		
-		# get the file
-		try:
-			response = urllib2.urlopen(COMMIT_MSG_SOURCE_URL)
-			commit_msg_file_contents = response.read()
-		except Exception:
-			raise SprintlyException('Unable to obtain commit-msg from ' + COMMIT_MSG_SOURCE_URL)
-		
-		# ensure directory exists
-		try:
-			if not os.path.exists(HOOK_DIR):
-				os.mkdir(HOOK_DIR, 0777)
-		except Exception:
-			raise SprintlyException('Unable to create directory ' + HOOK_DIR)
+        except Exception as e:
+            die('Fatal Error: ' + str(e))
 
-		# save the file		
-		try:		
-			commit_msg_file = open(HOOK_PATH, 'w')
-			commit_msg_file.write(commit_msg_file_contents)
-			commit_msg_file.close()
-		except Exception:
-			raise SprintlyException('Unable to save file to ' + HOOK_PATH)
-	
-		# make sure user can read, write, and execute
-		try:
-			os.chmod(HOOK_PATH, 0777)
-		except Exception:
-			raise SprintlyException('Unable to make ' + HOOK_PATH + ' executable.')
-		
-		print 'Hook was updated at ' + HOOK_PATH	
-	
+    def install(self, update):
+        """
+        Install this tool at SPRINTLY_PATH. If another file already
+        exists with the same name, user will be prompted to replace the file.
+        """
+
+        # must be run as root
+        euid = os.geteuid()
+        if euid != 0:
+            print 'Must be run as root. Try re-running with sudo.'
+            return
+
+        print 'Downloading latest version of sprintly from GitHub...'
+
+        # get the file
+        try:
+            response = urllib2.urlopen(SPRINTLY_SOURCE_URL)
+            sprintly_file_contents = response.read()
+        except Exception:
+            raise SprintlyException('Unable to obtain commit-msg from ' + SPRINTLY_SOURCE_URL)
+
+        # verify nothing exists at the target path
+        target = SPRINTLY_PATH
+        if os.path.isfile(target):
+            overwrite = raw_input('A file already exists at ' + target + '. Overwrite file? ')
+            while overwrite != 'y' and overwrite != 'n':
+                overwrite = raw_input('Please enter y/n: ')
+
+            if overwrite == 'n':
+                print 'Unable to install. Please install manually.'
+                return
+
+            # remove existing file
+            print 'Deleting ' + target + '...'
+            try:
+                os.unlink(target)
+            except Exception:
+                raise SprintlyException('Unable to remove ' + target)
+
+        # copy file to target
+        try:
+            target_file = open(target, 'w')
+            target_file.write(sprintly_file_contents)
+            target_file.close()
+        except Exception:
+            raise SprintlyException('Unable to save file to ' + target)
+
+        # ensure it is executable
+        try:
+            subprocess.call(['chmod', '+x', target])
+        except Exception:
+            raise SprintlyException('Unable to make ' + target + ' executable.')
+
+        # done!
+        print 'Successfully installed sprintly to ' + target
+
+        # except update the hook too
+        self.updateHook()
+
+        # if this is not an update, install
+        if not update:
+            print ''
+            print 'That\'s all! Type \'sprintly\' to get started.'
+            print ''
+
+    def initialize(self):
+        """
+        Ultimate goal is to get the user and key from the config file.
+        If the config file cannot be found, a config file will be
+        created via prompts displayed to the user. A cache file will
+        also be created during this step.
+        """
+
+        # get the users home directory
+        home = os.path.expanduser('~')
+        if home == '~':
+            raise SprintlyException('Unable to expand home directory.')
+
+        # set the sprintly directory path (create if it doesn't exist)
+        self._sprintlyDirectoryPath = home + '/.sprintly/'
+        if not os.path.isdir(self._sprintlyDirectoryPath):
+            os.mkdir(self._sprintlyDirectoryPath, 0700)
+            if not os.path.isdir(self._sprintlyDirectoryPath):
+                raise SprintlyException('Unable to create folder at ' + self._sprintlyDirectoryPath)
+
+        # set the sprintly config path (create if it doesn't exist)
+        self._sprintlyConfigPath = self._sprintlyDirectoryPath + '/sprintly.config'
+        if not os.path.isfile(self._sprintlyConfigPath):
+            self.createSprintlyConfig()
+
+        # set the sprintly cache path (create if it doesn't exist)
+        self._sprintlyCachePath = self._sprintlyDirectoryPath + '/sprintly.cache'
+        if not os.path.isfile(self._sprintlyCachePath):
+            try:
+                cache_file = open(self._sprintlyCachePath, 'w')
+                cache_file.write('')
+                cache_file.close()
+            except Exception:
+                raise SprintlyException('Unable to create file at ' + self._sprintlyCachePath)
+
+        # load config values
+        self.loadFromConfig()
+
+    def createSprintlyConfig(self, update=False):
+        """
+        Create the sprint.ly config. Prompt user for all necessary values.
+
+        When 'update' is set to True and an existing value is present for
+        a given configuration item, allow user to keep old value.
+
+        Note: if update is True, this must be called after initialize. Failure
+        to do so wil result in a new config being created, as the values in
+        self._config will not yet be set.
+        """
+
+        if not update:
+            print 'Creating config...'
+        else:
+            print 'Updating config... Press enter to accept default value shown in brackets.'
+
+        # set version
+        self._config['version'] = CONFIG_VERSION
+
+        # used to simplify prompting user with optional default
+        def getConfigItem(message, default=None):
+            if default:
+                item = raw_input('%s [%s]: ' % (message, default)) or default
+            else:
+                item = raw_input('%s: ' % message)
+            return item
+
+        # prompt for user
+        name = 'user'
+        message = 'Enter sprint.ly username (email)'
+        if update and name in self._config:
+            self._config[name] = getConfigItem(message, self._config[name])
+        else:
+            self._config[name] = getConfigItem(message)
+
+        # prompt for key
+        name = 'key'
+        message = 'Enter sprint.ly API Key'
+        if update and name in self._config:
+            self._config[name] = getConfigItem(message, self._config[name])
+        else:
+            self._config[name] = getConfigItem(message)
+
+        # try and use API with these values to determine validity
+        response = self.sprintlyAPICall('user/whoami.json')
+        if not response or 'code' in response:
+            raise SprintlyException('Invalid credentials. Unable to authenticate with sprint.ly.')
+        if response['email'] != self._config['user']:
+            raise SprintlyException('Invalid credentials. Please ensure you are using your own API Key.')
+
+        # add user id to config
+        self._config['id'] = response['id']
+
+        # get a list of products and prompt user for default product if more than 1
+        products = self.sprintlyAPICall('products.json')
+        if not products:
+            raise SprintlyException('Unable to get product list.')
+        productMap = {}
+        for product in products:
+            id = str(product['id'])
+            productMap[id] = product
+        productCount = len(productMap)
+        if productCount == 0:
+            raise SprintlyException('It appears that you have no products associated with your Sprint.ly account. Please add at least one and then try again.')
+        elif productCount == 1:
+            self._config['product'] = productMap.values()[0]
+        else:
+            # prompt user for a product until they enter one found in the map
+            productList = ', '.join(['%d - %s' % (p['id'], p['name']) for p in productMap.values()])
+            defaultProductId = '0'
+            while defaultProductId not in productMap.keys():
+                message = 'Enter default sprint.ly product id (%s)' % productList
+                if update and 'product' in self._config:
+                    defaultProductId = getConfigItem(message, str(self._config['product']['id']))
+                else:
+                    defaultProductId = getConfigItem(message)
+            self._config['product'] = productMap[defaultProductId]
+
+        # write config file if all is good
+        serialized_config = json.dumps(self._config)
+
+        try:
+            config_file = open(self._sprintlyConfigPath, 'w')
+            config_file.write(serialized_config)
+            config_file.close()
+            if not update:
+                print 'Configuration successfully created.'
+            else:
+                print 'Configuration successfully updated.'
+        except:
+            raise SprintlyException('Unable to write configuration to disk at ' + self._sprintlyConfigPath)
+
+    def loadFromConfig(self):
+        """
+        Load user and key from the config file. Validate here that the version
+        of this config is readable by this version of the tool.
+        """
+
+        try:
+            config_file = open(self._sprintlyConfigPath, 'r')
+            serialized_config = config_file.readline()
+            config_file.close()
+            self._config = json.loads(serialized_config)
+        except:
+            raise SprintlyException('Unable to read credentials from disk at ' + self._sprintlyConfigPath)
+
+        # validate version
+        if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
+            print 'Your configuration needs to be updated. You will now be prompted to update it.'
+            self.updateConfig()
+
+    def updateConfig(self):
+        """
+        Prompt user to update configuration settings.
+        Defaults will be original config values if present.
+        """
+        self.createSprintlyConfig(True)
+
+    def listSprintlyItems(self):
+        """
+        Lists all items for the current user from the sprint.ly api.
+        """
+
+        # populate the cache from the API if possible (may not be possible,
+        # e.g. in the case of offline access)
+        self.populateCache()
+        self.readCache()
+
+    def populateCache(self):
+        """
+        Populate the cache from the sprint.ly API if possible.
+        """
+
+        try:
+            cache = {}
+
+            cache['updated_at'] = time()
+            cache['products'] = []
+
+            products = []
+
+            # use product from config file
+            products.append(self._config['product'])
+
+            # get products from the API
+            # products = self.sprintlyAPICall('products.json')
+            # if not products:
+            #   raise SprintlyException('Unable to get product list.')
+
+            # iterate over products
+            for product in products:
+
+                product_name = product['name']
+                product_id = str(product['id'])
+                product_name_with_url = '\'' + product_name + '\' (https://sprint.ly/product/' + product_id + '/)'
+
+                # get all items assigned to current user
+                items = self.sprintlyAPICall('products/' + product_id + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
+                if not items:
+                    raise SprintlyException('Unable to get items for ' + product_name_with_url)
+
+                # check to see if this was an error message (product is archived, for example)
+                # only error messages (currently) have codes, so this is a definitive check
+                if 'code' in items:
+                    # include message if applicable
+                    message = ''
+                    if 'message' in items:
+                        message = ': ' + items['message']
+                    print 'Warning: unable to get items for ' + product_name_with_url + message
+                    continue
+
+                # a 'parent' is any item without a parent key
+                # a 'child' is any item with a parent key
+                # sort so that all parents appear first and all children appear after ordered by their number
+                items.sort(key=lambda item: item['number'] if 'parent' in item else sys.maxint, reverse=True)
+
+                # turn flat list into tree
+                itemsTree = []
+                itemsMap = {}
+
+                for item in items:
+                    number = str(item['number'])
+
+                    # if item is not a child
+                    if 'parent' not in item:
+                        itemsTree.append(item)
+                        itemsMap[number] = item
+
+                    # if item is a child...
+                    else:
+                        parentNumber = str(item['parent'])
+
+                        # if we have the parent, nest under parent
+                        if parentNumber in itemsMap:
+
+                            # we sorted items above to ensure all parents will be in map before any child is encountered
+                            parent = itemsMap[parentNumber]
+                            if 'children' not in parent:
+                                parent['children'] = []
+                            parent['children'].append(item)
+                        # if we don't have the parent, display as top level
+                        else:
+                            itemsTree.append(item)
+
+                # sort items by (first child, if it exists, else number)
+                itemsTree.sort(key=lambda item: item['children'][0]['number'] if 'children' in item else item['number'], reverse=True)
+                product['items'] = itemsTree
+                cache['products'].append(product)
+
+            serialized_cache = json.dumps(cache)
+
+            cache_file = open(self._sprintlyCachePath, 'w')
+            cache_file.write(serialized_cache)
+            cache_file.close()
+        except Exception:
+            print '\033[91m'
+            print 'Unable to populate cache. List may not be up to date.'
+            print '\033[0m'
+
+    def readCache(self):
+        """
+        Read from the cache and return a list of sprint.ly items.
+        """
+
+        cache_file = open(self._sprintlyCachePath, 'r')
+        serialized_cache = cache_file.readline()
+        cache_file.close()
+
+        try:
+            cache = json.loads(serialized_cache)
+        except Exception:
+            raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
+        updated_at = cache['updated_at']
+        products = cache['products']
+
+        for product in products:
+            name = product['name']
+            id = str(product['id'])
+            print 'Product: ' + name + ' (https://sprint.ly/product/' + id + '/)'
+
+            items = product['items']
+            for item in items:
+                print '\t#' + str(item['number']) + ': ' + item['title'][:80] + ' '
+
+                if 'children' in item:
+                    for child in item['children']:
+                        print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]
+
+    def sprintlyAPICall(self, url):
+        """
+        Wraps up a call to the sprint.ly api. Returns a map representing
+        the JSON response or false if the call could not be completed.
+        """
+
+        url = 'https://sprint.ly/api/' + url
+
+        try:
+            userData = 'Basic ' + (self._config['user'] + ':' + self._config['key']).encode('base64').rstrip()
+            req = urllib2.Request(url)
+            req.add_header('Accept', 'application/json')
+            req.add_header('Authorization', userData)
+            res = urllib2.urlopen(req)
+            response = res.read()
+            return json.loads(response)
+        except urllib2.HTTPError, error:
+            response = error.read()
+            return json.loads(response)
+        except Exception:
+            return False
+
+    def installHook(self):
+        """
+        A symlink will be created between the <current directory>/.git/hooks/commit-msg
+        and ~/.sprintly/commit-msg
+        """
+
+        # ensure the current directory is a git repository
+        directory = os.getcwd()
+        hooks_directory = directory + '/.git/hooks/'
+        if not os.path.isdir(hooks_directory):
+            raise SprintlyException('This command can only be run from the root of a git repository.')
+
+        # ensure hook is installed
+        if not os.path.isfile(HOOK_PATH):
+            raise SprintlyException('Please run \'sprintly --update\' first to install the hook.')
+
+        # create a symlink to the commit-msg file
+        destination = hooks_directory + 'commit-msg'
+
+        # if the destination is a file, move it; if it's a symlink, delete it
+        try:
+            if os.path.isfile(destination) and not os.path.islink(destination):
+                shutil.move(destination, destination + '.original')
+            elif os.path.islink(destination):
+                os.unlink(destination)
+        except Exception:
+            raise SprintlyException('File already exists at ' + destination + '. Please delete it before proceeding.')
+
+        print 'Creating symlink...'
+
+        try:
+            os.symlink(HOOK_PATH, destination)
+        except Exception:
+            raise SprintlyException('Unable to create symlink.')
+
+        print 'Hook was installed at ' + destination
+
+        # check to see if the email associated with git matches the sprint.ly email
+        # if not, sprint.ly won't be able to create comments
+        try:
+            process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
+            stdout, stderr = process.communicate()
+            gitEmail = stdout.strip()
+            if gitEmail != self._config['user']:
+                print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
+                print 'WARNING: Don\'t worry - there is an easy fix. Simply run one of the following:'
+                print '\t\'git config --global user.email ' + self._config['user'] + '\' (all repos)'
+                print '\t\'git config user.email ' + self._config['user'] + '\' (this repo only)'
+        except Exception:
+            print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
+
+    def updateHook(self):
+        """
+        Download the commit-msg hook to ~/.sprintly/commit-msg.
+        Replace existing file if present. Make executable.
+        Returns the path of the file.
+        """
+
+        print 'Downloading latest version of commit-msg hook from GitHub...'
+
+        # get the file
+        try:
+            response = urllib2.urlopen(COMMIT_MSG_SOURCE_URL)
+            commit_msg_file_contents = response.read()
+        except Exception:
+            raise SprintlyException('Unable to obtain commit-msg from ' + COMMIT_MSG_SOURCE_URL)
+
+        # ensure directory exists
+        try:
+            if not os.path.exists(HOOK_DIR):
+                os.mkdir(HOOK_DIR, 0777)
+        except Exception:
+            raise SprintlyException('Unable to create directory ' + HOOK_DIR)
+
+        # save the file
+        try:
+            commit_msg_file = open(HOOK_PATH, 'w')
+            commit_msg_file.write(commit_msg_file_contents)
+            commit_msg_file.close()
+        except Exception:
+            raise SprintlyException('Unable to save file to ' + HOOK_PATH)
+
+        # make sure user can read, write, and execute
+        try:
+            os.chmod(HOOK_PATH, 0777)
+        except Exception:
+            raise SprintlyException('Unable to make ' + HOOK_PATH + ' executable.')
+
+        print 'Hook was updated at ' + HOOK_PATH
+
+
 class SprintlyException(Exception):
-	"""
-	Exception used to pass known exceptions throughout
-	the sprintly tool.
-	"""
-	def __init__(self, value):
-		self.value = value
-	def __str__(self):
-		return repr(self.value)
+    """
+    Exception used to pass known exceptions throughout
+    the sprintly tool.
+    """
+    def __init__(self, value):
+        self.value = value
 
-def die(message = None):
-	"""
-	Prints the message, if present, and then exits.
-	"""
-	
-	if message:
-		print message
-	print 'Program exiting.'
-	sys.exit(1)
-	
+    def __str__(self):
+        return repr(self.value)
+
+
+def die(message=None):
+    """
+    Prints the message, if present, and then exits.
+    """
+
+    if message:
+        print message
+    print 'Program exiting.'
+    sys.exit(1)
+
 if __name__ == '__main__':
-	sprintlyTool = SprintlyTool()
-	sprintlyTool.run()
+    sprintlyTool = SprintlyTool()
+    sprintlyTool.run()
