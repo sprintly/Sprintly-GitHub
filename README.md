@@ -70,7 +70,7 @@ Just make sure that your git user.email matches your Sprint.ly username, or the 
 
 *Note: the hook installed is actually a symbolic link to a shared copy of the hook found at /usr/local/share/sprintly/commit-msg. By doing this, the hook can be easily updated for all users and all repositories by calling `sprintly --update`.*
 
-#Uninstalling the `commit-msg` hook.
+##Uninstalling the `commit-msg` hook.
 
 The `sprintly` tool can uninstall the hook for you as well. Navigate to the git repository in question and run:
 
