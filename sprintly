@@ -47,7 +47,7 @@ class SprintlyTool:
 
         try:
 
-            usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.'
+            usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.\n\nWhen using the commit-msg hook, you will be prompted for a Sprint.ly item number if you do not include a Sprint.ly keyword/item number in your commit message. Valid Sprint.ly keywords are:\n\n  close, closes, closed, fix, fixed, fixes, addresses, re, ref, refs, references, see, breaks, unfixes, reopen, reopens, re-open, re-opens\n\nAs a shortcut, you may also include an item number as the first word in your commit message:\n\n  \'#26 Message goes here\'\n\nThe hook will automatically prepend the keyword \'references\' and you won\'t be asked to provide an item number. This shortcut only works at the beginning of the message and does not support multiple item numbers.'
             parser = OptionParser(usage=usage)
             parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
             parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
