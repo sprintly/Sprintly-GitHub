@@ -428,7 +428,7 @@ class SprintlyTool:
         # try and get console width
         width = 80
         try:
-            (_,columns) = os.popen('stty size', 'r').read().split()
+            (_, columns) = os.popen('stty size', 'r').read().split()
             width = int(columns)
         except Exception:
             pass
