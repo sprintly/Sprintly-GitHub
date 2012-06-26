@@ -52,6 +52,7 @@ class SprintlyTool:
             parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
             parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
             parser.add_option('--install-hook', dest='installHook', help='install commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
+            parser.add_option('--uninstall-hook', dest='uninstallHook', help='uninstall commit-msg hook in current directory (must be a git repository)', action='store_true', default=False)
             parser.add_option('--update-config', dest='updateConfig', help='edit configuration', action='store_true', default=False)
 
             (options, _) = parser.parse_args()
@@ -67,6 +68,8 @@ class SprintlyTool:
             # run the requested option (note: install/update are handled above)
             if options.installHook:
                 self.installHook()
+            elif options.uninstallHook:
+                self.uninstallHook()
             elif options.updateConfig:
                 self.updateConfig()
             else:
@@ -499,6 +502,36 @@ class SprintlyTool:
                 print '\t\'git config user.email ' + self._config['user'] + '\' (this repo only)'
         except Exception:
             print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
+
+    def uninstallHook(self):
+        """
+        Remove the symlink we created. If the hook is not a symlink, don't remove it.
+        """
+
+        # ensure the current directory is a git repository
+        directory = os.getcwd()
+        hooks_directory = os.path.join(directory, '.git', 'hooks')
+        if not os.path.isdir(hooks_directory):
+            raise SprintlyException('This command can only be run from the root of a git repository.')
+
+        # get path to commit-msg file
+        destination = os.path.join(hooks_directory, HOOK_NAME)
+
+        # if the destination is a file, error; if it's a symlink, delete it
+        try:
+            if os.path.isfile(destination) and not os.path.islink(destination):
+                raise SprintlyException('The commit-msg hook was not installed by this tool. Please remove it manually.')
+            elif os.path.islink(destination):
+                os.unlink(destination)
+            else:
+                print 'Hook is already uninstalled.'
+                return
+        except SprintlyException as e:
+            raise e
+        except Exception:
+            raise SprintlyException('File already exists at %s. Please delete it before proceeding.' % destination)
+
+        print 'Hook has been uninstalled.'
 
     def updateHook(self):
         """
