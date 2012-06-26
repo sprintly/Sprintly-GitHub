@@ -341,13 +341,26 @@ class SprintlyTool:
                 productNameWithUrl = '\'' + productName + '\' (https://sprint.ly/product/' + productId + '/)'
 
                 # get all items assigned to current user
-                items = self.sprintlyAPICall('products/' + productId + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=100')
-                if not items:
-                    raise SprintlyException('Unable to get items for %s' % productNameWithUrl)
+                items = []
+                offset = 0
+                limit = 100
+                while True:
+                    itemsPartial = self.sprintlyAPICall('products/' + productId + '/items.json?assigned_to=' + str(self._config['id']) + '&children=1&limit=' + str(limit) + '&offset=' + str(offset))
 
-                # check to see if this was an error message (product is archived, for example)
-                # only error messages (currently) have codes, so this is a definitive check
-                if 'code' in items:
+                    # if we get nothing, an empty list, an error, quit
+                    if not itemsPartial or len(itemsPartial) == 0 or 'code' in items:
+                        break
+                    # otherwise, add on these items and increase the offset
+                    else:
+                        items = items + itemsPartial
+                        offset = offset + limit
+
+                    # if we got less than a full response, no need to check again
+                    if len(itemsPartial) < limit:
+                        break
+
+                # if anything went wrong, print an error message
+                if not items or len(items) == 0 or 'code' in items:
                     # include message if applicable
                     message = ''
                     if 'message' in items:
