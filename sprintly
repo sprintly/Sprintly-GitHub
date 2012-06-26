@@ -412,6 +412,14 @@ class SprintlyTool:
         serialized_cache = cache_file.readline()
         cache_file.close()
 
+        # try and get console width
+        width = 80
+        try:
+            (_,columns) = os.popen('stty size', 'r').read().split()
+            width = int(columns)
+        except Exception:
+            pass
+
         try:
             cache = json.loads(serialized_cache)
         except Exception:
@@ -421,15 +429,18 @@ class SprintlyTool:
         for product in products:
             name = product['name']
             productId = str(product['id'])
-            print 'Product: ' + name + ' (https://sprint.ly/product/' + productId + '/)'
+            printProduct = 'Product: ' + name + ' (https://sprint.ly/product/' + productId + '/)'
+            print printProduct[:width]
 
             items = product['items']
             for item in items:
-                print '\t#' + str(item['number']) + ': ' + item['title'][:80] + ' '
+                printItem = '  #' + str(item['number']) + ': ' + item['title']
+                print printItem[:width - 2]
 
                 if 'children' in item:
                     for child in item['children']:
-                        print '\t\t#' + str(child['number']) + ': ' + child['title'][:70]
+                        printChild = '    #' + str(child['number']) + ': ' + child['title']
+                        print printChild[:width - 4]
 
     def sprintlyAPICall(self, url):
         """
