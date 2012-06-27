@@ -443,16 +443,19 @@ class SprintlyTool:
             name = product['name']
             productId = str(product['id'])
             printProduct = 'Product: ' + name + ' (https://sprint.ly/product/' + productId + '/)'
+            printProduct = printProduct.encode('utf-8', 'ignore')
             print printProduct[:width]
 
             items = product['items']
             for item in items:
                 printItem = '  #' + str(item['number']) + ': ' + item['title']
+                printItem = printItem.encode('utf-8', 'ignore')
                 print printItem[:width - 2]
 
                 if 'children' in item:
                     for child in item['children']:
                         printChild = '    #' + str(child['number']) + ': ' + child['title']
+                        printChild = printChild.encode('utf-8', 'ignore')
                         print printChild[:width - 4]
 
     def sprintlyAPICall(self, url):
