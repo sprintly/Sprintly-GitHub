@@ -50,7 +50,7 @@ To update `sprintly`, type `sudo sprintly --update`. When updating, you will see
 
 Entering `y` will overwrite the old installation with the latest version. *Note: if you have another tool installed at `/usr/local/bin/sprintly`, enter `n` and manually install it under a different name.*
 
-#Installing the `commit-msg` hook.
+#GitHub Integration: Installing the `commit-msg` hook.
 
 The `sprintly` tool can install the hook for you. Navigate to a git repository and run:
 
@@ -58,7 +58,9 @@ The `sprintly` tool can install the hook for you. Navigate to a git repository a
 	Creating symlink...
 	Hook was installed at <repository>/.git/hooks/commit-msg
 
-Just make sure that your git user.email matches your Sprint.ly username, or the hook won't work. If this happens, you will see the following message:
+**Important: you MUST install this manually in every git repository. This is a limitation of the way git implements hooks. Don't blame me!**
+
+Tip: make sure that your git user.email matches your Sprint.ly username, or the hook won't work. If this happens, you will see the following message:
 
 	$ sprintly --install-hook
 	Creating symlink...
@@ -70,7 +72,7 @@ Just make sure that your git user.email matches your Sprint.ly username, or the 
 
 *Note: the hook installed is actually a symbolic link to a shared copy of the hook found at /usr/local/share/sprintly/commit-msg. By doing this, the hook can be easily updated for all users and all repositories by calling `sprintly --update`.*
 
-###Uninstalling the `commit-msg` hook.
+###GitHub Integration: Uninstalling the `commit-msg` hook.
 
 The `sprintly` tool can uninstall the hook for you as well. Navigate to the git repository in question and run:
 
