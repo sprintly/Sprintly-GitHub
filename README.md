@@ -40,6 +40,7 @@ Once the installation is complete, run `sprintly` from any directory to get star
 	Enter default sprint.ly product id (117 - Company, 129 - Secret): 117
 	Configuration successfully created.
 
+*Note: your Sprint.ly API Key can be found here: [https://sprint.ly/account/profile/].*
 *Note: you will only be asked to enter a sprint.ly product id if you have more than one product.*
 
 To update `sprintly`, type `sudo sprintly --update`. When updating, you will see a warning:
