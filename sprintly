@@ -581,7 +581,7 @@ class SprintlyTool:
         # ensure directory exists
         try:
             if not os.path.exists(HOOK_DIR):
-                os.mkdir(HOOK_DIR, 0777)
+                os.makedirs(HOOK_DIR, 0777)
         except Exception:
             raise SprintlyException('Unable to create directory %s' % HOOK_DIR)
 
