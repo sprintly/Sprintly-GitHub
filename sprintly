@@ -119,6 +119,8 @@ class SprintlyTool:
 
         # copy file to target
         try:
+            if not os.path.isdir(SPRINTLY_DIR):
+                os.makedirs(SPRINTLY_DIR)
             target_file = open(target, 'w')
             target_file.write(sprintly_file_contents)
             target_file.close()
