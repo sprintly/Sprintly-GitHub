@@ -399,9 +399,12 @@ class SprintlyTool:
                             if 'children' not in parent:
                                 parent['children'] = []
                             parent['children'].append(item)
-                        # if we don't have the parent, display as top level
+                        # if we don't have the parent, add placeholder parent to preserve tree structure
                         else:
-                            itemsTree.append(item)
+                            parent = {'number':parentNumber, 'title':'[Unavailable]', 'children':[]}
+                            itemsMap[parentNumber] = parent
+                            parent['children'].append(item)
+                            itemsTree.append(parent)
 
                 # sort items by (first child, if it exists, else number)
                 itemsTree.sort(key=lambda item: item['children'][0]['number'] if 'children' in item else item['number'], reverse=True)
