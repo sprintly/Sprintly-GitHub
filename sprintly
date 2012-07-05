@@ -389,7 +389,8 @@ class SprintlyTool:
 
                     # if item is a child...
                     else:
-                        parentNumber = str(item['parent'])
+                        parent = item['parent']
+                        parentNumber = str(parent['number'])
 
                         # if we have the parent, nest under parent
                         if parentNumber in itemsMap:
