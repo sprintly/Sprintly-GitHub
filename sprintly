@@ -377,7 +377,7 @@ class SprintlyTool:
 
                 # turn flat list into tree
                 itemsTree = []
-                parentMapping = {}
+                parentMapping = {}  # allow parents to be looked up by number
 
                 for item in items:
                     number = str(item['number'])
