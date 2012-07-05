@@ -389,7 +389,8 @@ class SprintlyTool:
 
                     # if item is a child...
                     else:
-                        parent = item['parent'].copy() # copy necessary to avoid circular reference
+                        parent = item['parent'] # get reference to parent
+                        del item['parent'] # remove parent from child
                         parentNumber = str(parent['number'])
 
                         # if we have the parent, nest under parent
