@@ -389,8 +389,8 @@ class SprintlyTool:
 
                     # if item is a child...
                     else:
-                        parent = item['parent'] # get reference to parent
-                        del item['parent'] # remove parent from child
+                        parent = item['parent']  # get reference to parent
+                        del item['parent']  # remove parent from child
                         parentNumber = str(parent['number'])
 
                         # if we have the parent, nest under parent
@@ -403,7 +403,7 @@ class SprintlyTool:
                             parent['children'].append(item)
                         # if we don't have the parent, add placeholder parent to preserve tree structure
                         else:
-                            parent['children'] = [item,]
+                            parent['children'] = [item]
                             parentMapping[parentNumber] = parent
                             itemsTree.append(parent)
 
