@@ -377,7 +377,7 @@ class SprintlyTool:
 
                 # turn flat list into tree
                 itemsTree = []
-                itemsMap = {}
+                parentMapping = {}
 
                 for item in items:
                     number = str(item['number'])
@@ -385,7 +385,7 @@ class SprintlyTool:
                     # if item is not a child
                     if 'parent' not in item:
                         itemsTree.append(item)
-                        itemsMap[number] = item
+                        parentMapping[number] = item
 
                     # if item is a child...
                     else:
@@ -393,17 +393,17 @@ class SprintlyTool:
                         parentNumber = str(parent['number'])
 
                         # if we have the parent, nest under parent
-                        if parentNumber in itemsMap:
+                        if parentNumber in parentMapping:
 
                             # we sorted items above to ensure all parents will be in map before any child is encountered
-                            parent = itemsMap[parentNumber]
+                            parent = parentMapping[parentNumber]
                             if 'children' not in parent:
                                 parent['children'] = []
                             parent['children'].append(item)
                         # if we don't have the parent, add placeholder parent to preserve tree structure
                         else:
                             parent['children'] = [item,]
-                            itemsMap[parentNumber] = parent
+                            parentMapping[parentNumber] = parent
                             itemsTree.append(parent)
 
                 # sort items by (first child, if it exists, else number)
