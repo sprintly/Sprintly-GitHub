@@ -389,7 +389,7 @@ class SprintlyTool:
 
                     # if item is a child...
                     else:
-                        parent = item['parent']
+                        parent = item['parent'].copy() # copy necessary to avoid circular reference
                         parentNumber = str(parent['number'])
 
                         # if we have the parent, nest under parent
@@ -402,9 +402,8 @@ class SprintlyTool:
                             parent['children'].append(item)
                         # if we don't have the parent, add placeholder parent to preserve tree structure
                         else:
-                            parent = {'number':parentNumber, 'title':'[Unavailable]', 'children':[]}
+                            parent['children'] = [item,]
                             itemsMap[parentNumber] = parent
-                            parent['children'].append(item)
                             itemsTree.append(parent)
 
                 # sort items by (first child, if it exists, else number)
