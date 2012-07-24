@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# -*- coding: UTF-8 -*-
 
 import sys
 import os
@@ -77,7 +78,7 @@ class SprintlyTool:
         """
             
         try:
-            usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.\n\nWhen using the commit-msg hook, you will be prompted for a Sprint.ly item number unless you include a Sprint.ly keyword/item number in your commit message:\n\n  \'Commit message goes here. References #54. Closes #65.\'\n\nValid Sprint.ly keywords are:\n\n  close, closes, closed, fix, fixed, fixes, addresses, re, ref, refs, references, see, breaks, unfixes, reopen, reopens, re-open, re-opens\n\nAs a shortcut, you may also include an item number as the first word in your commit message:\n\n  \'#26 Message goes here\'\n\nThe hook will automatically prepend the keyword \'references\' and you won\'t be asked to provide an item number. This shortcut only works at the beginning of the message and does not support multiple item numbers.'
+            usage = 'Usage: %prog [options]\n\nBy default, your Sprint.ly items will be shown.\n\nWhen using the commit-msg hook, you will be prompted for a Sprint.ly item number unless you include a Sprint.ly keyword/item number in your commit message:\n\n  \'Commit message goes here. References #54. Closes #65.\'\n\nValid Sprint.ly keywords are:\n\n  close, closes, closed, fix, fixed, fixes, addresses, re, ref, refs, references, see, breaks, unfixes, reopen, reopens, re-open, re-opens\n\nAs a shortcut, you may also include an item number as the first word in your commit message:\n\n  \'#26 Message goes here\'\n\nThe hook will automatically prepend the keyword \'references\' and you won\'t be asked to provide an item number. This shortcut only works at the beginning of the message and does not support multiple item numbers.'
             parser = OptionParser(usage=usage)
             parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
             parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
@@ -393,15 +394,17 @@ class SprintlyTool:
                 for item in items:
                     color = item_colors.get(item['type'])
                     
-                    printItem = '${%s}  #%d${LIGHT_GREY}:${WHITE} %s' % (color, item['number'], item['title'])
+                    printItem = '${%s} #%d${LIGHT_GREY}:${WHITE} %s' % (color, item['number'], item['title'])
                     printItem = printItem.encode('utf-8', 'ignore')
                     self.cprint(printItem[:width - 2])
 
                     if 'children' in item:
                         for child in item['children']:
-                            printChild = '${GREEN}    #' + str(child['number']) + '${LIGHT_GREY}:${WHITE} ' + child['title']
+                            childColor = item_colors.get(child['type'])
+
+                            printChild = u'${LIGHT_GREY} ➥ ${%s}#%d${LIGHT_GREY}:${WHITE} %s' % (color, child['number'], child['title'])
                             printChild = printChild.encode('utf-8', 'ignore')
-                            print printChild[:width - 4]
+                            self.cprint(printChild[:width - 4])
 
     def populateCache(self):
         """
