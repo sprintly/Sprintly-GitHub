@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
 import sys
@@ -9,9 +9,14 @@ import json
 import shutil
 import subprocess
 import re
+import string
+import logging
 
 from time import time
 from optparse import OptionParser
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
 
 # constants
 CONFIG_VERSION = '2.1'
@@ -27,13 +32,27 @@ SPRINTLY_PATH = SPRINTLY_DIR + SPRINTLY_NAME
 HOOK_PATH = HOOK_DIR + HOOK_NAME
 
 # tty colors
-GREY, BRIGHT_RED, BRIGHT_GREEN, BRIGHT_YELLOW, BRIGHT_BLUE, BRIGHT_MAGENTA, BRIGHT_CYAN, WHITE = [('\x1b[%dm' % (90 + i)) for i in range(8)]
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, LIGHT_GREY = [('\x1b[%dm' % (30 + i)) for i in range(8)]
-RESET, NORMAL, BOLD, BLINK, INVERT = [('\x1b[%dm' % i) for i in (0, 22, 1, 5, 7)]
+GREY, BRIGHT_RED, BRIGHT_GREEN, BRIGHT_YELLOW, BRIGHT_BLUE, BRIGHT_MAGENTA, BRIGHT_CYAN, WHITE = [('\x1b[%dm' % (90 + i)) for i in range(8)]
+RESET, NORMAL, BOLD, DIM, UNDERLINE, INVERT, HIDDEN = [('\x1b[%dm' % i) for i in (0, 22, 1, 2, 4, 7, 8)]
 ATTRS = {
-    'GREY': GREY, 'BRIGHT_RED': BRIGHT_RED, 'BRIGHT_GREEN': BRIGHT_GREEN, 'BRIGHT_YELLOW': BRIGHT_YELLOW, 'BRIGHT_BLUE': BRIGHT_BLUE, 'BRIGHT_MAGENTA': BRIGHT_MAGENTA, 'BRIGHT_CYAN': BRIGHT_CYAN, 'WHITE': WHITE,
     'BLACK': BLACK, 'RED': RED, 'GREEN': GREEN, 'YELLOW': YELLOW, 'BLUE': BLUE, 'MAGENTA': MAGENTA, 'CYAN': CYAN, 'LIGHT_GREY': LIGHT_GREY,
-    'RESET': RESET, 'NORMAL': NORMAL, 'BOLD': BOLD, 'BLINK': BLINK, 'INVERT': INVERT
+    'GREY': GREY, 'BRIGHT_RED': BRIGHT_RED, 'BRIGHT_GREEN': BRIGHT_GREEN, 'BRIGHT_YELLOW': BRIGHT_YELLOW, 'BRIGHT_BLUE': BRIGHT_BLUE, 'BRIGHT_MAGENTA': BRIGHT_MAGENTA, 'BRIGHT_CYAN': BRIGHT_CYAN, 'WHITE': WHITE,
+    'RESET': RESET, 'NORMAL': NORMAL, 'BOLD': BOLD, 'DIM': DIM, 'UNDERLINE': UNDERLINE, 'INVERT': INVERT, 'HIDDEN': HIDDEN
+}
+
+ITEM_COLORS = {
+    'story': 'GREEN',
+    'task': 'GREY',
+    'defect': 'RED',
+    'test': 'CYAN'
+}
+
+ITEM_STATUSES = {
+    'backlog': "Backlog",
+    'in-progress': "In Progress",
+    'completed': "Completed",
+    'accepted': "Accepted",
 }
 
 class SprintlyTool:
@@ -46,7 +65,7 @@ class SprintlyTool:
         """
         Initialize instance variables.
         """
-        
+
         # Set up term for color handling
         self._term = term_stream
         self._is_tty = False
@@ -60,7 +79,7 @@ class SprintlyTool:
                 self._cols = curses.tigetnum('cols')
             except:
                 pass
-        else:            
+        else:
             try:
                 (_, columns) = os.popen('stty size', 'r').read().split()
                 self._cols = int(columns)
@@ -76,7 +95,7 @@ class SprintlyTool:
         """
         Application flow.
         """
-            
+
         try:
             usage = 'Usage: %prog [options]\n\nBy default, your Sprint.ly items will be shown.\n\nWhen using the commit-msg hook, you will be prompted for a Sprint.ly item number unless you include a Sprint.ly keyword/item number in your commit message:\n\n  \'Commit message goes here. References #54. Closes #65.\'\n\nValid Sprint.ly keywords are:\n\n  close, closes, closed, fix, fixed, fixes, addresses, re, ref, refs, references, see, breaks, unfixes, reopen, reopens, re-open, re-opens\n\nAs a shortcut, you may also include an item number as the first word in your commit message:\n\n  \'#26 Message goes here\'\n\nThe hook will automatically prepend the keyword \'references\' and you won\'t be asked to provide an item number. This shortcut only works at the beginning of the message and does not support multiple item numbers.'
             parser = OptionParser(usage=usage)
@@ -107,19 +126,13 @@ class SprintlyTool:
                 self.listSprintlyItems()
 
         except Exception as e:
-            die('Fatal Error: %s' % str(e))
+            die('Fatal Error: %s', e)
 
     def install(self, update):
         """
         Install this tool at SPRINTLY_PATH. If another file already
         exists with the same name, user will be prompted to replace the file.
         """
-
-        # must be run as root
-        euid = os.geteuid()
-        if euid != 0:
-            self.cprint('Must be run as root. Try re-running with sudo.', attr=RED)
-            return
 
         print 'Downloading latest version of sprintly from GitHub...'
 
@@ -345,66 +358,60 @@ class SprintlyTool:
         self.populateCache()
         products = self.readCache()
         self.printList(products)
-        
-    def printList(self, products):        
+
+    def printList(self, products):
         """
         Print a list of Sprint.ly items.
         """
 
-        # try and get console width
-        width = self._cols
-        
         statusTree = {
             'backlog': {},
-            'in-progress': {}
+            'in-progress': {},
+            'completed': {},
+            'accepted': {},
         }
-        
+
         for product in products:
             for item in product['items']:
                 if not product['id'] in statusTree[item['status']]:
                     statusTree[item['status']][product['id']] = []
-                
+
                 statusTree[item['status']][product['id']].append(item)
 
         for key, status in iter(sorted(statusTree.items())):
             if not len(status):
                 continue
-            
-            printStatus = 'In Progress' if (key == 'in-progress') else 'Backlog'
-            # printStatus = ('=' * (len(printStatus))) + '\r\n' + printStatus + '\r\n' + ('-' * (len(printStatus)))
-            printStatus = '\r\n' + printStatus + '\r\n${LIGHT_GREY}' + ('-' * (len(printStatus)))
-            printStatus = printStatus.encode('utf-8', 'ignore')
-            self.cprint(printStatus[:width], attr=BRIGHT_MAGENTA)
-            
+
+            self.cprint(ITEM_STATUSES[key], attr=[BRIGHT_MAGENTA, UNDERLINE])
+
             for product_id in status:
                 items = status[product_id]
                 name = items[0]['product']['name']
                 productId = str(items[0]['product']['id'])
                 printProduct = '${LIGHT_GREY}Product: ${BOLD}${BRIGHT_BLUE}' + name + '${NORMAL}${GREY} (https://sprint.ly/product/' + productId + '/)'
-                printProduct = printProduct.encode('utf-8', 'ignore')
-                self.cprint(printProduct[:width])
-                
-                item_colors = {
-                    'story': 'GREEN',
-                    'task': 'GREY',
-                    'defect': 'RED',
-                    'test': 'CYAN'
-                }
-                
+                self.cprint(printProduct)
+
                 for item in items:
-                    color = item_colors.get(item['type'])
-                    
-                    printItem = '${%s} #%d${LIGHT_GREY}:${WHITE} %s' % (color, item['number'], item['title'])
-                    printItem = printItem.encode('utf-8', 'ignore')
-                    self.cprint(printItem[:width - 2])
+                    attr = DIM if item['status'] in ('completed', 'accepted') else WHITE
+
+                    color = ITEM_COLORS.get(item['type'])
+                    title_color = 'WHITE'
+
+                    printItem = '${%s} #%d${LIGHT_GREY}:${%s} %s' % (color, item['number'], title_color, item['title'])
+                    self.cprint(printItem, attr=attr)
 
                     if 'children' in item:
                         for child in item['children']:
-                            childColor = item_colors.get(child['type'])
+                            attr = DIM if child['status'] in ('completed', 'accepted') else WHITE
+                            childColor = ITEM_COLORS.get(child['type'])
+                            title = child['title']
+                            if child['status'] == 'in-progress':
+                                title = u'${GREEN}⧁ ${WHITE}' + title
 
-                            printChild = u'${LIGHT_GREY} ➥ ${%s}#%d${LIGHT_GREY}:${WHITE} %s' % (color, child['number'], child['title'])
-                            printChild = printChild.encode('utf-8', 'ignore')
-                            self.cprint(printChild[:width - 4])
+                            printChild = u'${LIGHT_GREY}  ${%s}#%d${LIGHT_GREY}:${WHITE} %s' % (childColor, child['number'], title)
+                            self.cprint(printChild, attr=attr)
+
+            self.cprint('')
 
     def populateCache(self):
         """
@@ -493,7 +500,7 @@ class SprintlyTool:
                             if 'children' not in parent:
                                 parent['children'] = []
                             parent['children'].append(item)
-                            
+
                         # if we don't have the parent, add placeholder parent to preserve tree structure
                         else:
                             parent['children'] = [item]
@@ -528,7 +535,7 @@ class SprintlyTool:
             cache = json.loads(serialized_cache)
         except Exception:
             raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
-            
+
         return cache['products']
 
     def sprintlyAPICall(self, url):
@@ -672,21 +679,56 @@ class SprintlyTool:
 
         self.cprint('Hook was updated at %s' % HOOK_PATH, attr=GREEN)
 
-    def cprint(self, str, attr=WHITE):
-        self._term.write(self.render(str + '\r\n', attr))
-            
-    def render(self, str, attr=WHITE):
+    def cprint(self, str, attr=WHITE, trim=True):
+        self._term.write(self.render(str, attr, trim) + '\r\n')
+
+    def render(self, str, attr=WHITE, trim=True):
         if self._has_color:
-            seq = attr + str + RESET
-            seq = re.sub(r'\$\$|\${\w+}', self._render_sub, seq)
-            return seq
+            if isinstance(attr, list):
+                attr = ''.join(attr)
+            seq = re.sub(r'\$\$|\${\w+}', self._render_sub, str)
+            if trim:
+                seq = self._trim(seq)
+
+            return attr + seq + RESET
         else:
-            return re.sub(r'\$\$|\${\w+}', '', str)
-            
+            seq = re.sub(r'\$\$|\${\w+}', '', str)
+            if trim and len(seq) > self._cols:
+                return seq[0:self._cols - 1] + u'…'
+
     def _render_sub(self, match):
         s = match.group()
         if s == '$$': return s
         else: return ATTRS.get(s[2:-1], '')
+
+    def _trim(self, raw):
+        # TODO: >>> This could probably be much simpler if I was smarter
+        seq = ''
+        str_len = 0
+        i = 0
+        matchiter = re.finditer(r'(\x1b.*?m)', raw.strip())
+        for match in matchiter:
+            chunk = raw[i:match.start()]
+            i = match.end()
+            if str_len + len(chunk) > self._cols:
+                chunk = chunk[0:self._cols - str_len - 1] + u'…'
+            str_len = str_len + len(chunk)
+            seq = seq + chunk + match.group()
+
+            if (str_len >= self._cols):
+                break
+
+        if str_len < self._cols:
+            chunk = raw[i:]
+            if str_len + len(chunk) > self._cols:
+                chunk = chunk[0:self._cols - str_len - 1] + u'…'
+            seq = seq + chunk
+
+        return seq
+
+    def elipsify(self, seq):
+        return seq[0:-1].strip(string.punctuation) + u'…'
+
 
 class SprintlyException(Exception):
     """
@@ -700,13 +742,13 @@ class SprintlyException(Exception):
         return repr(self.value)
 
 
-def die(message=None):
+def die(message=None, *args):
     """
     Prints the message, if present, and then exits.
     """
 
     if message:
-        print message
+        logger.error(message, *args, exc_info=True)
     print 'Program exiting.'
     sys.exit(1)
 
