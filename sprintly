@@ -3,7 +3,7 @@
 
 import sys
 import os
-import curses
+import locale
 import urllib2
 import json
 import shutil
@@ -11,7 +11,7 @@ import subprocess
 import re
 import string
 import logging
-
+from curses import setupterm, tigetstr, tigetnum, tparm
 from time import time
 from optparse import OptionParser
 
@@ -32,10 +32,12 @@ SPRINTLY_PATH = SPRINTLY_DIR + SPRINTLY_NAME
 HOOK_PATH = HOOK_DIR + HOOK_NAME
 
 # tty colors
+DEFAULT = '\x1b[39m'
 BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, LIGHT_GREY = [('\x1b[%dm' % (30 + i)) for i in range(8)]
 GREY, BRIGHT_RED, BRIGHT_GREEN, BRIGHT_YELLOW, BRIGHT_BLUE, BRIGHT_MAGENTA, BRIGHT_CYAN, WHITE = [('\x1b[%dm' % (90 + i)) for i in range(8)]
 RESET, NORMAL, BOLD, DIM, UNDERLINE, INVERT, HIDDEN = [('\x1b[%dm' % i) for i in (0, 22, 1, 2, 4, 7, 8)]
 ATTRS = {
+    'DEFAULT': DEFAULT,
     'BLACK': BLACK, 'RED': RED, 'GREEN': GREEN, 'YELLOW': YELLOW, 'BLUE': BLUE, 'MAGENTA': MAGENTA, 'CYAN': CYAN, 'LIGHT_GREY': LIGHT_GREY,
     'GREY': GREY, 'BRIGHT_RED': BRIGHT_RED, 'BRIGHT_GREEN': BRIGHT_GREEN, 'BRIGHT_YELLOW': BRIGHT_YELLOW, 'BRIGHT_BLUE': BRIGHT_BLUE, 'BRIGHT_MAGENTA': BRIGHT_MAGENTA, 'BRIGHT_CYAN': BRIGHT_CYAN, 'WHITE': WHITE,
     'RESET': RESET, 'NORMAL': NORMAL, 'BOLD': BOLD, 'DIM': DIM, 'UNDERLINE': UNDERLINE, 'INVERT': INVERT, 'HIDDEN': HIDDEN
@@ -66,17 +68,21 @@ class SprintlyTool:
         Initialize instance variables.
         """
 
-        # Set up term for color handling
-        self._term = term_stream
+        # Set up terminal
+        locale.setlocale(locale.LC_ALL, '')
+        self._encoding = locale.getpreferredencoding()
+
+        self._term = term_stream or sys.__stdout__
         self._is_tty = False
         self._has_color = False
         self._cols = 80
+
         if hasattr(term_stream, "isatty") and term_stream.isatty():
             try:
-                curses.setupterm()
+                setupterm()
                 self._is_tty = True
-                self._has_color = curses.tigetnum("colors") > 2
-                self._cols = curses.tigetnum('cols')
+                self._has_color = tigetnum('colors') > 2
+                self._cols = tigetnum('cols')
             except:
                 pass
         else:
@@ -388,27 +394,26 @@ class SprintlyTool:
                 items = status[product_id]
                 name = items[0]['product']['name']
                 productId = str(items[0]['product']['id'])
-                printProduct = '${LIGHT_GREY}Product: ${BOLD}${BRIGHT_BLUE}' + name + '${NORMAL}${GREY} (https://sprint.ly/product/' + productId + '/)'
+                printProduct = '${DEFAULT}Product: ${BOLD}${BRIGHT_BLUE}' + name + '${NORMAL}${GREY} (https://sprint.ly/product/' + productId + '/)'
                 self.cprint(printProduct)
 
+                title_color = 'DEFAULT'
                 for item in items:
-                    attr = DIM if item['status'] in ('completed', 'accepted') else WHITE
-
+                    attr = DIM if item['status'] in ('completed', 'accepted') else None
                     color = ITEM_COLORS.get(item['type'])
-                    title_color = 'WHITE'
 
-                    printItem = '${%s} #%d${LIGHT_GREY}:${%s} %s' % (color, item['number'], title_color, item['title'])
+                    printItem = '${%s} #%d${DEFAULT}:${%s} %s' % (color, item['number'], title_color, item['title'])
                     self.cprint(printItem, attr=attr)
 
                     if 'children' in item:
                         for child in item['children']:
-                            attr = DIM if child['status'] in ('completed', 'accepted') else WHITE
+                            attr = DIM if child['status'] in ('completed', 'accepted') else None
                             childColor = ITEM_COLORS.get(child['type'])
                             title = child['title']
                             if child['status'] == 'in-progress':
-                                title = u'${GREEN}⧁ ${WHITE}' + title
+                                title = u'${GREEN}⧁ ${%s}%s' % (title_color, title)
 
-                            printChild = u'${LIGHT_GREY}  ${%s}#%d${LIGHT_GREY}:${WHITE} %s' % (childColor, child['number'], title)
+                            printChild = u'${%s}  #%d${DEFAULT}:${%s} %s' % (childColor, child['number'], title_color, title)
                             self.cprint(printChild, attr=attr)
 
             self.cprint('')
@@ -679,13 +684,17 @@ class SprintlyTool:
 
         self.cprint('Hook was updated at %s' % HOOK_PATH, attr=GREEN)
 
-    def cprint(self, str, attr=WHITE, trim=True):
+    def cprint(self, str, attr=None, trim=True):
         self._term.write(self.render(str, attr, trim) + '\r\n')
 
-    def render(self, str, attr=WHITE, trim=True):
+    def render(self, str, attr=None, trim=True):
         if self._has_color:
-            if isinstance(attr, list):
-                attr = ''.join(attr)
+            if attr:
+                if isinstance(attr, list):
+                    attr = ''.join(attr)
+            else:
+                attr = ''
+
             seq = re.sub(r'\$\$|\${\w+}', self._render_sub, str)
             if trim:
                 seq = self._trim(seq)
@@ -695,6 +704,7 @@ class SprintlyTool:
             seq = re.sub(r'\$\$|\${\w+}', '', str)
             if trim and len(seq) > self._cols:
                 return seq[0:self._cols - 1] + u'…'
+            return seq
 
     def _render_sub(self, match):
         s = match.group()
