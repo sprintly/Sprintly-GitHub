@@ -1,17 +1,25 @@
-#!/usr/bin/python
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
 
 import sys
 import os
+import locale
 import urllib2
 import json
 import shutil
 import subprocess
-
+import re
+import string
+import logging
+from curses import setupterm, tigetstr, tigetnum, tparm
 from time import time
 from optparse import OptionParser
 
+logging.basicConfig()
+logger = logging.getLogger(__name__)
+
 # constants
-CONFIG_VERSION = '2'
+CONFIG_VERSION = '2.1'
 SPRINTLY_NAME = 'sprintly'
 SPRINTLY_DIR = '/usr/local/bin/'
 HOOK_NAME = 'commit-msg'
@@ -23,31 +31,79 @@ COMMIT_MSG_SOURCE_URL = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/
 SPRINTLY_PATH = SPRINTLY_DIR + SPRINTLY_NAME
 HOOK_PATH = HOOK_DIR + HOOK_NAME
 
+# tty colors
+DEFAULT = '\x1b[39m'
+BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, LIGHT_GREY = [('\x1b[%dm' % (30 + i)) for i in range(8)]
+GREY, BRIGHT_RED, BRIGHT_GREEN, BRIGHT_YELLOW, BRIGHT_BLUE, BRIGHT_MAGENTA, BRIGHT_CYAN, WHITE = [('\x1b[%dm' % (90 + i)) for i in range(8)]
+RESET, NORMAL, BOLD, DIM, UNDERLINE, INVERT, HIDDEN = [('\x1b[%dm' % i) for i in (0, 22, 1, 2, 4, 7, 8)]
+ATTRS = {
+    'DEFAULT': DEFAULT,
+    'BLACK': BLACK, 'RED': RED, 'GREEN': GREEN, 'YELLOW': YELLOW, 'BLUE': BLUE, 'MAGENTA': MAGENTA, 'CYAN': CYAN, 'LIGHT_GREY': LIGHT_GREY,
+    'GREY': GREY, 'BRIGHT_RED': BRIGHT_RED, 'BRIGHT_GREEN': BRIGHT_GREEN, 'BRIGHT_YELLOW': BRIGHT_YELLOW, 'BRIGHT_BLUE': BRIGHT_BLUE, 'BRIGHT_MAGENTA': BRIGHT_MAGENTA, 'BRIGHT_CYAN': BRIGHT_CYAN, 'WHITE': WHITE,
+    'RESET': RESET, 'NORMAL': NORMAL, 'BOLD': BOLD, 'DIM': DIM, 'UNDERLINE': UNDERLINE, 'INVERT': INVERT, 'HIDDEN': HIDDEN
+}
+
+ITEM_COLORS = {
+    'story': 'GREEN',
+    'task': 'GREY',
+    'defect': 'RED',
+    'test': 'CYAN'
+}
+
+ITEM_STATUSES = {
+    'backlog': "Backlog",
+    'in-progress': "In Progress",
+    'completed': "Completed",
+    'accepted': "Accepted",
+}
 
 class SprintlyTool:
     """
     A command line tool for displaying your stories, tasks, tests, and defects
-    from sprint.ly.
+    from Sprint.ly.
     """
 
-    def __init__(self):
+    def __init__(self, term_stream=sys.stdout):
         """
         Initialize instance variables.
         """
+
+        # Set up terminal
+        locale.setlocale(locale.LC_ALL, '')
+        self._encoding = locale.getpreferredencoding()
+
+        self._term = term_stream or sys.__stdout__
+        self._is_tty = False
+        self._has_color = False
+        self._cols = 80
+
+        if hasattr(term_stream, "isatty") and term_stream.isatty():
+            try:
+                setupterm()
+                self._is_tty = True
+                self._has_color = tigetnum('colors') > 2
+                self._cols = tigetnum('cols')
+            except:
+                pass
+        else:
+            try:
+                (_, columns) = os.popen('stty size', 'r').read().split()
+                self._cols = int(columns)
+            except:
+                pass
 
         self._config = {}
         self._sprintlyDirectoryPath = None
         self._sprintlyConfigPath = None
         self._sprintlyCachePath = None
 
-    def run(self):
+    def run(self, scr=None):
         """
         Application flow.
         """
 
         try:
-
-            usage = 'Usage: %prog [options]\n\nBy default, your sprintly items will be shown.\n\nWhen using the commit-msg hook, you will be prompted for a Sprint.ly item number unless you include a Sprint.ly keyword/item number in your commit message:\n\n  \'Commit message goes here. References #54. Closes #65.\'\n\nValid Sprint.ly keywords are:\n\n  close, closes, closed, fix, fixed, fixes, addresses, re, ref, refs, references, see, breaks, unfixes, reopen, reopens, re-open, re-opens\n\nAs a shortcut, you may also include an item number as the first word in your commit message:\n\n  \'#26 Message goes here\'\n\nThe hook will automatically prepend the keyword \'references\' and you won\'t be asked to provide an item number. This shortcut only works at the beginning of the message and does not support multiple item numbers.'
+            usage = 'Usage: %prog [options]\n\nBy default, your Sprint.ly items will be shown.\n\nWhen using the commit-msg hook, you will be prompted for a Sprint.ly item number unless you include a Sprint.ly keyword/item number in your commit message:\n\n  \'Commit message goes here. References #54. Closes #65.\'\n\nValid Sprint.ly keywords are:\n\n  close, closes, closed, fix, fixed, fixes, addresses, re, ref, refs, references, see, breaks, unfixes, reopen, reopens, re-open, re-opens\n\nAs a shortcut, you may also include an item number as the first word in your commit message:\n\n  \'#26 Message goes here\'\n\nThe hook will automatically prepend the keyword \'references\' and you won\'t be asked to provide an item number. This shortcut only works at the beginning of the message and does not support multiple item numbers.'
             parser = OptionParser(usage=usage)
             parser.add_option('--install', dest='install', help='install this tool', action='store_true', default=False)
             parser.add_option('--update', dest='update', help='update this tool', action='store_true', default=False)
@@ -76,19 +132,13 @@ class SprintlyTool:
                 self.listSprintlyItems()
 
         except Exception as e:
-            die('Fatal Error: %s' % str(e))
+            die('Fatal Error: %s', e)
 
     def install(self, update):
         """
         Install this tool at SPRINTLY_PATH. If another file already
         exists with the same name, user will be prompted to replace the file.
         """
-
-        # must be run as root
-        euid = os.geteuid()
-        if euid != 0:
-            print 'Must be run as root. Try re-running with sudo.'
-            return
 
         print 'Downloading latest version of sprintly from GitHub...'
 
@@ -102,12 +152,12 @@ class SprintlyTool:
         # verify nothing exists at the target path
         target = SPRINTLY_PATH
         if os.path.isfile(target):
-            overwrite = raw_input('A file already exists at %s. Overwrite file? ' % target)
+            overwrite = raw_input(self.render('${BRIGHT_YELLOW}A file already exists at %s.${RESET} Overwrite file? ' % target))
             while overwrite != 'y' and overwrite != 'n':
                 overwrite = raw_input('Please enter y/n: ')
 
             if overwrite == 'n':
-                print 'Unable to install. Please install manually.'
+                self.cprint('Unable to install. Please install manually.', attr=RED)
                 return
 
             # remove existing file
@@ -134,7 +184,7 @@ class SprintlyTool:
             raise SprintlyException('Unable to make %s executable.' % target)
 
         # done!
-        print 'Successfully installed sprintly to %s' % target
+        self.cprint('Successfully installed sprintly to %s' % target, attr=GREEN)
 
         # except update the hook too
         self.updateHook()
@@ -142,7 +192,7 @@ class SprintlyTool:
         # if this is not an update, install
         if not update:
             print ''
-            print 'That\'s all! Type \'sprintly\' to get started.'
+            self.cprint('That\'s all! Type \'sprintly\' and hit enter to get started.', attr=BRIGHT_MAGENTA)
             print ''
 
     def initialize(self):
@@ -184,7 +234,7 @@ class SprintlyTool:
 
     def createSprintlyConfig(self, update=False):
         """
-        Create the sprint.ly config. Prompt user for all necessary values.
+        Create the Sprint.ly config. Prompt user for all necessary values.
 
         When 'update' is set to True and an existing value is present for
         a given configuration item, allow user to keep old value.
@@ -205,14 +255,14 @@ class SprintlyTool:
         # used to simplify prompting user with optional default
         def getConfigItem(message, default=None):
             if default:
-                item = raw_input('%s [%s]: ' % (message, default)) or default
+                item = raw_input(self.render('%s [${YELLOW}%s${RESET}]: ' % (message, default))) or default
             else:
                 item = raw_input('%s: ' % message)
             return item
 
         # prompt for user
         name = 'user'
-        message = 'Enter sprint.ly username (email)'
+        message = 'Enter Sprint.ly username (email)'
         if update and name in self._config:
             self._config[name] = getConfigItem(message, self._config[name])
         else:
@@ -220,7 +270,7 @@ class SprintlyTool:
 
         # prompt for key
         name = 'key'
-        message = 'Enter sprint.ly API Key'
+        message = 'Enter Sprint.ly API Key'
         if update and name in self._config:
             self._config[name] = getConfigItem(message, self._config[name])
         else:
@@ -229,7 +279,7 @@ class SprintlyTool:
         # try and use API with these values to determine validity
         response = self.sprintlyAPICall('user/whoami.json')
         if not response or 'code' in response:
-            raise SprintlyException('Invalid credentials. Unable to authenticate with sprint.ly.')
+            raise SprintlyException('Invalid credentials. Unable to authenticate with Sprint.ly.')
         if response['email'] != self._config['user']:
             raise SprintlyException('Invalid credentials. Please ensure you are using your own API Key.')
 
@@ -257,7 +307,7 @@ class SprintlyTool:
             productList = ', '.join(['%d - %s' % (p['id'], p['name']) for p in productMap.values()])
             defaultProductId = '0'
             while defaultProductId not in productMap.keys():
-                message = 'Enter default sprint.ly product id (%s)' % productList
+                message = 'Enter default Sprint.ly product id (%s)' % productList
                 if update and 'product' in self._config:
                     defaultProductId = getConfigItem(message, str(self._config['product']['id']))
                 else:
@@ -272,9 +322,9 @@ class SprintlyTool:
             config_file.write(serialized_config)
             config_file.close()
             if not update:
-                print 'Configuration successfully created.'
+                self.cprint('Configuration successfully created.', attr=GREEN)
             else:
-                print 'Configuration successfully updated.'
+                self.cprint('Configuration successfully updated.', attr=GREEN)
         except:
             raise SprintlyException('Unable to write configuration to disk at %s' % self._sprintlyConfigPath)
 
@@ -294,7 +344,7 @@ class SprintlyTool:
 
         # validate version
         if 'version' not in self._config or self._config['version'] != CONFIG_VERSION:
-            print 'Your configuration needs to be updated. You will now be prompted to update it.'
+            self.cprint('Your configuration needs to be updated. You will now be prompted to update it.', attr=YELLOW)
             self.updateConfig()
 
     def updateConfig(self):
@@ -306,17 +356,71 @@ class SprintlyTool:
 
     def listSprintlyItems(self):
         """
-        Lists all items for the current user from the sprint.ly api.
+        Lists all items for the current user from the Sprint.ly API.
         """
 
         # populate the cache from the API if possible (may not be possible,
         # e.g. in the case of offline access)
         self.populateCache()
-        self.readCache()
+        products = self.readCache()
+        self.printList(products)
+
+    def printList(self, products):
+        """
+        Print a list of Sprint.ly items.
+        """
+
+        statusTree = {
+            'backlog': {},
+            'in-progress': {},
+            'completed': {},
+            'accepted': {},
+        }
+
+        for product in products:
+            for item in product['items']:
+                if not product['id'] in statusTree[item['status']]:
+                    statusTree[item['status']][product['id']] = []
+
+                statusTree[item['status']][product['id']].append(item)
+
+        for key, status in iter(sorted(statusTree.items())):
+            if not len(status):
+                continue
+
+            self.cprint(ITEM_STATUSES[key], attr=[BRIGHT_MAGENTA, UNDERLINE])
+
+            for product_id in status:
+                items = status[product_id]
+                name = items[0]['product']['name']
+                productId = str(items[0]['product']['id'])
+                printProduct = '${DEFAULT}Product: ${BOLD}${BRIGHT_BLUE}' + name + '${NORMAL}${GREY} (https://sprint.ly/product/' + productId + '/)'
+                self.cprint(printProduct)
+
+                title_color = 'DEFAULT'
+                for item in items:
+                    attr = DIM if item['status'] in ('completed', 'accepted') else None
+                    color = ITEM_COLORS.get(item['type'])
+
+                    printItem = '${%s} #%d${DEFAULT}:${%s} %s' % (color, item['number'], title_color, item['title'])
+                    self.cprint(printItem, attr=attr)
+
+                    if 'children' in item:
+                        for child in item['children']:
+                            attr = DIM if child['status'] in ('completed', 'accepted') else None
+                            childColor = ITEM_COLORS.get(child['type'])
+                            title = child['title']
+                            if child['status'] == 'in-progress':
+                                title = u'${GREEN}⧁ ${%s}%s' % (title_color, title)
+
+                            printChild = u'${%s}  #%d${DEFAULT}:${%s} %s' % (childColor, child['number'], title_color, title)
+                            self.cprint(printChild, attr=attr)
+
+            self.cprint('')
 
     def populateCache(self):
         """
-        Populate the cache from the sprint.ly API if possible.
+        Populate the cache from the Sprint.ly API if possible.
         """
 
         try:
@@ -377,7 +481,7 @@ class SprintlyTool:
 
                 # turn flat list into tree
                 itemsTree = []
-                parentMapping = {}  # allow parents to be looked up by number
+                parentMapping = {} # allow parents to be looked up by number
 
                 for item in items:
                     number = str(item['number'])
@@ -401,13 +505,14 @@ class SprintlyTool:
                             if 'children' not in parent:
                                 parent['children'] = []
                             parent['children'].append(item)
+
                         # if we don't have the parent, add placeholder parent to preserve tree structure
                         else:
                             parent['children'] = [item]
                             parentMapping[parentNumber] = parent
                             itemsTree.append(parent)
 
-                # sort items by (first child, if it exists, else number)
+                # sort items by (status, then first child, if it exists, else number)
                 itemsTree.sort(key=lambda item: item['children'][0]['number'] if 'children' in item else item['number'], reverse=True)
                 product['items'] = itemsTree
                 cache['products'].append(product)
@@ -424,49 +529,23 @@ class SprintlyTool:
 
     def readCache(self):
         """
-        Read from the cache and return a list of sprint.ly items.
+        Read from the cache and return a list of Sprint.ly items.
         """
 
         cache_file = open(self._sprintlyCachePath, 'r')
         serialized_cache = cache_file.readline()
         cache_file.close()
 
-        # try and get console width
-        width = 80
-        try:
-            (_, columns) = os.popen('stty size', 'r').read().split()
-            width = int(columns)
-        except Exception:
-            pass
-
         try:
             cache = json.loads(serialized_cache)
         except Exception:
             raise SprintlyException('Cache is empty or invalid. Please try running the tool again.')
-        products = cache['products']
 
-        for product in products:
-            name = product['name']
-            productId = str(product['id'])
-            printProduct = 'Product: ' + name + ' (https://sprint.ly/product/' + productId + '/)'
-            printProduct = printProduct.encode('utf-8', 'ignore')
-            print printProduct[:width]
-
-            items = product['items']
-            for item in items:
-                printItem = '  #' + str(item['number']) + ': ' + item['title']
-                printItem = printItem.encode('utf-8', 'ignore')
-                print printItem[:width - 2]
-
-                if 'children' in item:
-                    for child in item['children']:
-                        printChild = '    #' + str(child['number']) + ': ' + child['title']
-                        printChild = printChild.encode('utf-8', 'ignore')
-                        print printChild[:width - 4]
+        return cache['products']
 
     def sprintlyAPICall(self, url):
         """
-        Wraps up a call to the sprint.ly api. Returns a map representing
+        Wraps up a call to the Sprint.ly api. Returns a map representing
         the JSON response or false if the call could not be completed.
         """
 
@@ -523,18 +602,18 @@ class SprintlyTool:
 
         print 'Hook was installed at %s' % destination
 
-        # check to see if the email associated with git matches the sprint.ly email
-        # if not, sprint.ly won't be able to create comments
+        # check to see if the email associated with git matches the Sprint.ly email
+        # if not, Sprint.ly won't be able to create comments
         try:
             process = subprocess.Popen(['git', 'config', 'user.email'], stdout=subprocess.PIPE)
             gitEmail = process.stdout.read().strip()
             if gitEmail != self._config['user']:
-                print 'WARNING: Your git email (' + gitEmail + ') does not match your sprint.ly username (' + self._config['user'] + ')'
+                print 'WARNING: Your git email (' + gitEmail + ') does not match your Sprint.ly username (' + self._config['user'] + ')'
                 print 'WARNING: Don\'t worry - there is an easy fix. Simply run one of the following:'
                 print '\t\'git config --global user.email ' + self._config['user'] + '\' (all repos)'
                 print '\t\'git config user.email ' + self._config['user'] + '\' (this repo only)'
         except Exception:
-            print 'Unable to verify that \'git config user.email\' matches your sprint.ly account email.'
+            print 'Unable to verify that \'git config user.email\' matches your Sprint.ly account email.'
 
     def uninstallHook(self):
         """
@@ -603,7 +682,62 @@ class SprintlyTool:
         except Exception:
             raise SprintlyException('Unable to make %s executable.' % HOOK_PATH)
 
-        print 'Hook was updated at %s' % HOOK_PATH
+        self.cprint('Hook was updated at %s' % HOOK_PATH, attr=GREEN)
+
+    def cprint(self, str, attr=None, trim=True):
+        self._term.write(self.render(str, attr, trim) + '\r\n')
+
+    def render(self, str, attr=None, trim=True):
+        if self._has_color:
+            if attr:
+                if isinstance(attr, list):
+                    attr = ''.join(attr)
+            else:
+                attr = ''
+
+            seq = re.sub(r'\$\$|\${\w+}', self._render_sub, str)
+            if trim:
+                seq = self._trim(seq)
+
+            return attr + seq + RESET
+        else:
+            seq = re.sub(r'\$\$|\${\w+}', '', str)
+            if trim and len(seq) > self._cols:
+                return seq[0:self._cols - 1] + u'…'
+            return seq
+
+    def _render_sub(self, match):
+        s = match.group()
+        if s == '$$': return s
+        else: return ATTRS.get(s[2:-1], '')
+
+    def _trim(self, raw):
+        # TODO: >>> This could probably be much simpler if I was smarter
+        seq = ''
+        str_len = 0
+        i = 0
+        matchiter = re.finditer(r'(\x1b.*?m)', raw.strip())
+        for match in matchiter:
+            chunk = raw[i:match.start()]
+            i = match.end()
+            if str_len + len(chunk) > self._cols:
+                chunk = chunk[0:self._cols - str_len - 1] + u'…'
+            str_len = str_len + len(chunk)
+            seq = seq + chunk + match.group()
+
+            if (str_len >= self._cols):
+                break
+
+        if str_len < self._cols:
+            chunk = raw[i:]
+            if str_len + len(chunk) > self._cols:
+                chunk = chunk[0:self._cols - str_len - 1] + u'…'
+            seq = seq + chunk
+
+        return seq
+
+    def elipsify(self, seq):
+        return seq[0:-1].strip(string.punctuation) + u'…'
 
 
 class SprintlyException(Exception):
@@ -618,13 +752,13 @@ class SprintlyException(Exception):
         return repr(self.value)
 
 
-def die(message=None):
+def die(message=None, *args):
     """
     Prints the message, if present, and then exits.
     """
 
     if message:
-        print message
+        logger.error(message, *args, exc_info=True)
     print 'Program exiting.'
     sys.exit(1)
 
