@@ -552,7 +552,7 @@ class SprintlyTool:
         url = 'https://sprint.ly/api/%s' % url
 
         try:
-            userData = 'Basic ' + (self._config['user'] + ':' + self._config['key']).encode('base64').rstrip()
+            userData = 'Basic ' + (self._config['user'] + ':' + self._config['key']).encode('base64').replace("\n",'')
             req = urllib2.Request(url)
             req.add_header('Accept', 'application/json')
             req.add_header('Authorization', userData)
