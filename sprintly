@@ -466,14 +466,16 @@ class SprintlyTool:
                         break
 
                 # if anything went wrong, print an error message
-                if not items or len(items) == 0 or 'code' in items:
+                if 'code' in items:
                     # include message if applicable
                     message = ''
                     if 'message' in items:
                         message = ': %s' % items['message']
                     print 'Warning: unable to get items for %s%s' % (productNameWithUrl, message)
                     continue
-
+                # if there are no items, display message
+                elif len(items) == 0:
+                    print 'No assigned items for %s' % (productNameWithUrl)
                 # a 'parent' is any item without a parent key
                 # a 'child' is any item with a parent key
                 # sort so that all parents appear first and all children appear after ordered by their number
