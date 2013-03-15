@@ -152,7 +152,7 @@ class SprintlyTool:
         # verify nothing exists at the target path
         target = SPRINTLY_PATH
         if os.path.isfile(target):
-            overwrite = raw_input(self.render('${BRIGHT_YELLOW}A file already exists at %s.${RESET} Overwrite file? ' % target))
+            overwrite = raw_input(self.render('${BRIGHT_YELLOW}A file already exists at %s.${RESET} Overwrite file? ' % target, trim=False))
             while overwrite != 'y' and overwrite != 'n':
                 overwrite = raw_input('Please enter y/n: ')
 
