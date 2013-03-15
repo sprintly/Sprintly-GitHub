@@ -255,7 +255,7 @@ class SprintlyTool:
         # used to simplify prompting user with optional default
         def getConfigItem(message, default=None):
             if default:
-                item = raw_input(self.render('%s [${YELLOW}%s${RESET}]: ' % (message, default))) or default
+                item = raw_input(self.render('%s [${YELLOW}%s${RESET}]: ' % (message, default), trim=False)) or default
             else:
                 item = raw_input('%s: ' % message)
             return item
