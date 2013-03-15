@@ -119,7 +119,13 @@ class SprintlyTool:
 
             # if the user wants to install, do it before we initialize (they will re-run once installed)
             if options.install or options.update:
-                self.install(options.update)
+                try:
+                    self.install(options.update)
+                except SprintlyException as se:
+                    type = 'install'
+                    if options.update:
+                        type = 'update'
+                    self.cprint('Unable to %s. Try running again with sudo.' % (type), attr=RED)
                 return
 
             # ensure that the ~/.sprintly/ folder exists, we have credentials, etc
