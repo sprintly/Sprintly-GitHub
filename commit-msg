@@ -46,8 +46,6 @@ def process(commit_msg_path):
     commit_msg = commit_msg_file.write(new_commit_msg)
     commit_msg_file.close()
 
-    sys.exit(0)
-
 
 def validate_message(message):
     """
@@ -136,3 +134,12 @@ if __name__ == '__main__':
     except Exception as e:
         print '\n\nError occurred. Commit aborted.'
         sys.exit(1)
+
+    # Execute the original commit hook. Note: We don't want realpath because
+    # sprintly links  /usr/local/share/sprintly/commit-msg to
+    # .git/hooks/commit-msg and we want to be in the hooks directory.
+    original_commit_msg = os.path.dirname(__file__) + '/commit-msg.original'
+    if os.path.exists(original_commit_msg):
+      sys.exit(subprocess.call([original_commit_msg, sys.argv[1]]))
+    else:
+      sys.exit(0)
