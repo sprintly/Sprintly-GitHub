@@ -32,7 +32,8 @@ The `sprintly` tool can now install itself. Follow the instructions below to get
 	sudo python sprintly --install
 
 	# clean up
-	rm sprintly
+	cd ../
+    sudo rm -R sprintly
 
 Once the installation is complete, run `sprintly` from any directory to get started. If you have never used the tool before, it will walk you through adding your Sprint.ly credentials:
 
