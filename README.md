@@ -23,7 +23,10 @@
 The `sprintly` tool can now install itself. Follow the instructions below to get started:
 
 	# download the latest version of the tool
-	curl -O https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly
+	git clone https://github.com/nextbigsoundinc/Sprintly-GitHub.git
+
+	# change to the repo directory
+	cd Sprintly-GitHub
 
 	# install
 	sudo python sprintly --install
