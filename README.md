@@ -107,7 +107,7 @@ Type `sprintly` at a command prompt to see a list of your current Sprint.ly item
 		#2: As a developer, I want a better set of unit tests so that changes to our...
 			#3: Add tests to widget creation page
 
-With the `commit-msg` hook installed, whenever a commit is made and pushed, a comment will be automatically published on the corresponding Sprint.ly item. Head to Sprint.ly for more [details](http://support.sprint.ly/kb/integration/available-scmvcs-commands 'Sprint.ly SCM/VCS Commands').
+With the `commit-msg` hook installed, whenever a commit is made and pushed, a comment will be automatically published on the corresponding Sprint.ly item. Head to Sprint.ly for more [details](https://sprintly.uservoice.com/knowledgebase/articles/108139-available-scm-vcs-commands 'Sprint.ly SCM/VCS Commands').
 
 	$ git commit -m "Normal commit message here."
 	Product: Example Company (https://sprint.ly/product/#/)
