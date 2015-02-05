@@ -28,8 +28,8 @@ SPRINTLY_NAME = 'sprintly'
 SPRINTLY_DIR = '/usr/local/bin/'
 HOOK_NAME = 'commit-msg'
 HOOK_DIR = '/usr/local/share/sprintly/'
-SPRINTLY_SOURCE_URL = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/sprintly'
-COMMIT_MSG_SOURCE_URL = 'https://raw.github.com/nextbigsoundinc/Sprintly-GitHub/master/commit-msg'
+SPRINTLY_SOURCE_URL = 'https://raw.githubusercontent.com/sprintly/Sprintly-GitHub/master/sprintly'
+COMMIT_MSG_SOURCE_URL = 'https://raw.githubusercontent.com/sprintly/Sprintly-GitHub/master/commit-msg'
 
 # non-editable constants
 SPRINTLY_PATH = SPRINTLY_DIR + SPRINTLY_NAME
