@@ -41,7 +41,7 @@ Install with Git
 
 ```shell
 # download the latest version of the tool
-git clone https://github.com/nextbigsoundinc/Sprintly-GitHub.git
+git clone https://github.com/sprintly/Sprintly-GitHub.git
 
 # change to the repo directory
 cd Sprintly-GitHub
