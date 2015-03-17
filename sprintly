@@ -587,12 +587,12 @@ class SprintlyTool:
 
         # ensure the current directory is a git repository
         directory = os.getcwd()
-        hooks_directory = os.path.join(directory, '.git', 'hooks')
-        if not os.path.isdir(directory):
+        git_directory = os.path.join(directory, '.git')
+        if not os.path.isdir(git_directory):
             raise SprintlyException('This command can only be run from the root of a git repository.')
+        hooks_directory = os.path.join(git_directory, 'hooks')
         if not os.path.isdir(hooks_directory):
-            raise SprintlyException('You do not appear to have a hooks/ directory in your .git/ directory.')
-
+            raise SprintlyException('You do not appear to have a .git/hooks directory in your git repository.')
         # ensure hook is installed
         if not os.path.isfile(HOOK_PATH):
             raise SprintlyException('Please run \'sprintly --update\' first to install the hook.')
