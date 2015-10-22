@@ -36,7 +36,7 @@ def process(commit_msg_path):
             return
 
         # convert items into string
-        items_string = ' '.join(map(lambda x: 'References #' + str(x) + '.', items))
+        items_string = ' '.join(map(lambda x: 'Re #' + str(x) + '.', items))
 
         # create new commit message
         new_commit_msg = items_string + ' ' + commit_msg
